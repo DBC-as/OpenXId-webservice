@@ -1,0 +1,11 @@
+# ============================================================================
+#			Literals
+#			
+#			This file contains vulnerable data - not to be exposed
+#			Before running make, please adjust data accordingly
+#			
+# ============================================================================
+
+OCI_LOGON=user/pass@server.dk/server.dk
+SERVICE_LOGON=user/pass@server.dk/server.dk
+OPENXID_URL=http://openxid.addi.dk/x.y

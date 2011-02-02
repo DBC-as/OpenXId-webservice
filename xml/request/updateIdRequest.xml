@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xid="http://oss.dbc.dk/ns/openxid">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <xid:updateIdRequest>
+      <xid:recordId>123</xid:recordId>
+      <xid:clusterId>11</xid:clusterId>
+      <xid:id>
+        <xid:idType>ean</xid:idType>
+        <xid:idValue>1-56592-709-5</xid:idValue>
+      </xid:id>
+      <xid:id>
+        <xid:idType>ean</xid:idType>
+        <xid:idValue>9780130147141</xid:idValue>
+      </xid:id>
+    </xid:updateIdRequest>
+  </soapenv:Body>
+</soapenv:Envelope>
