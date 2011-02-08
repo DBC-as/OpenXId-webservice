@@ -27,12 +27,17 @@ require_once("$startdir/OLS_class_lib/pg_database_class.php");
 require_once("$startdir/OLS_class_lib/material_id_class.php");
 require_once("$startdir/OLS_class_lib/curl_class.php");
 
+define('VOXB_SERVICE_NUMBER', 4);               // Service number for the Voxb Service
+define('VOXB_HARVEST_POLL_TIME', 5);            // Time given in minutes
+define('PROGRESS_INDICATOR_LINE_LENGTH', 100);  // Number of periods in a progression indicator line
+define('PROGRESS_INDICATOR_CHUNK', 100);        // Size of chunks to process for each period to be echoed 
+
 //==============================================================================
 
 class output {
   static $enabled;  // Echo enable flag
   static $marcEnabled;  // Echo marc enable flag
-  private function __construct() {}  // Prevents instantiation
+  private function __construct() {}
   
   function enable($flag) {
     self::$enabled = $flag;
@@ -73,29 +78,79 @@ class output {
 
 //==============================================================================
 
+class progressIndicator {
+  private $enabled;  // Echo enable flag
+  private $counter;  // Counting number of ticks
+
+  function __construct($enable=false) {
+    $this->enabled = $enable;
+    $this->counter = 0;
+  }
+
+  function __destruct() {
+    if (!$this->enabled) return;
+    echo "  (" . strval($this->counter+1) . ")\n";
+  }
+
+  function enable($flag) {
+    $this->enabled = $flag;
+  }
+
+  function tick($count=1) {
+    for (; $count>0; $count--, $this->counter++) {
+      if (!$this->enabled) continue;
+      if (($this->counter%PROGRESS_INDICATOR_CHUNK)==(PROGRESS_INDICATOR_CHUNK-1)) {
+        echo '.';
+      }
+      if (($this->counter % (PROGRESS_INDICATOR_LINE_LENGTH*PROGRESS_INDICATOR_CHUNK)) == ((PROGRESS_INDICATOR_LINE_LENGTH*PROGRESS_INDICATOR_CHUNK)-1)) {
+        echo "  (" . strval($this->counter+1) . ")\n";
+      }
+    }
+
+  }
+}
+
+//==============================================================================
+
 class serviceDatabase {
-  private $oci;  // Database instance
+  private $oci;         // Database instance
+  private $ociDelete;   // Database instance
 
   function __construct($authentication) {
     try {
       $this->oci = new Oci($authentication);
       $this->oci->connect();
+      $this->ociDelete = new Oci($authentication);
+      $this->ociDelete->connect();
     } catch (ociException $e) {
       output::die_log($e);
     }
   }
   
-  function query() {
+  function queryServices() {
     try {
-      $sql = "select id, danbibid, bibliotek, data from poster where rownum < 6";
-      $this->oci->set_query($sql);
+      $this->oci->set_query('select id from services where service = ' . VOXB_SERVICE_NUMBER);
     } catch (ociException $e) {
       output::die_log($e);
     }
   }
   
-  function fetch() {
-    return $this->oci->fetch_into_assoc();
+  function fetchId() {
+    try {
+      $ret = $this->oci->fetch_into_assoc();
+    } catch (ociException $e) {
+      output::die_log($e);
+    }
+    return $ret['ID'];
+  }
+
+  function removeService($idno) {
+    try {
+      $this->ociDelete->set_query("delete from services where service = " . VOXB_SERVICE_NUMBER . " and id = $idno");
+      $this->ociDelete->commit();
+    } catch (ociException $e) {
+      output::die_log($e);
+    }
   }
 }
 
@@ -260,7 +315,7 @@ class guessId {
 class openXidWrapper {
   static $enabled;
 
-  private function __construct() {}  // Prevents instantiation
+  private function __construct() {}
   
   private function _buildRequest($openxid, $clusterid, $matches) {
     $requestDom = new DOMDocument('1.0', 'UTF-8');
@@ -300,14 +355,19 @@ class openXidWrapper {
 //==============================================================================
 
 class harvest {
+  private $progress;    // Progress indicator
   private $fieldTab;    // Holds translation table for fields/subfields
   private $danbibDb;    // Object holding danbib database
+  private $serviceDb;   // Object holding service database
   private $openxidurl;  // URL to the Open Xid Webservice
+  private $noupdate;    // Boolean to tell, whether to send data to OpenXId - if false, no data is sent
 
   function __construct($config, $verbose) {
+    $this->progress = new progressIndicator(!(array_key_exists('marc', $verbose) or array_key_exists('verbose', $verbose)));
     output::enable(array_key_exists('verbose', $verbose));
     output::marcEnable(array_key_exists('marc', $verbose) and array_key_exists('verbose', $verbose));
-    openXidWrapper::enable(!array_key_exists('silent', $verbose));
+    $this->noupdate = array_key_exists('noupdate', $verbose);
+    openXidWrapper::enable(!$this->noupdate);
     output::open($config->get_value("logfile", "setup"), $config->get_value("verbose", "setup"));
     // Construct the fieldTab table - translating field/subfield to identifier types
     $this->fieldTab = array();
@@ -320,79 +380,79 @@ class harvest {
         }
     }
     $this->danbibDb = new danbibDatabase($config->get_value('ocilogon', 'setup'));
+    $this->serviceDb = new serviceDatabase($config->get_value('servicelogon', 'setup'));
     $this->openxidurl = $config->get_value('openxidurl', 'setup');
   }
+
+
+  private function _processMarcRecord($num) {
+    $marcclass = new marc();
+    $marcclass->fromString($num['DATA']);
+    output::display("Marc record({$num['LENGTH']}): library={$num['BIBLIOTEK']}, id={$num['ID']}, danbibid={$num['DANBIBID']}");
+    foreach ($marcclass as $marcItem) {
+      $field = $marcItem['field'];
+      if ($field != '000') {
+        output::marcDisplay("   $field {$marcItem['indicator']}");
+        if (is_array($marcItem['subfield'])) {
+          foreach ($marcItem['subfield'] as $subfield) {
+            $subfieldCode = $subfield[0];
+            $subfield = substr($subfield, 1);
+            output::marcDisplay("     $subfieldCode $subfield");
+            if (isset($this->fieldTab[$field][$subfieldCode])) {
+              $match[strtolower($this->fieldTab[$field][$subfieldCode])][] = $subfield;
+            }
+          }
+        }
+      } else {  // $field IS '000', and there is nothing to find here, However we can display something if verbose enabled
+        output::marcDisplay("   $field {$marcItem['indicator']}");
+        if (is_array($marcItem['subfield'])) {
+          foreach ($marcItem['subfield'] as $subfield) {
+            output::marcDisplay("     $subfield");
+          }
+        }
+      }
+    }
+    openXidWrapper::sendupdateIdRequest($this->openxidurl, $num['ID'], $num['DANBIBID'], guessId::guess($match));
+    unset($marcclass);
+    unset($match);
+  }
+
+
+  private function _processDanbibData($where) {
+    $this->danbibDb->query($where);
+    while ($num = $this->danbibDb->fetch()) {
+      $this->progress->tick();
+      $this->_processMarcRecord($num);
+    }
+  }
+
 
   function execute($howmuch) {
     if (empty($howmuch)) {  // $howmuch contains either one of the strings 'full' or 'inc' - or an array of id's
       output::die_log('No identifiers specified');
     }
-
-    //while (true) {
-    //  $sql ='select id from services where serviceno = 3';
-    //  $this->oci->getxxx($sql);
-
-    //  while ($idno = $this->oci->fetch_row($xxx)) {
-
-
-
-    if (is_array($howmuch)) {
-      $where = "where id in ('" . implode("','", $howmuch) . "')";
-    } else if ($howmuch == 'inc') {
-      output::die_log('Incremental harvest is not yet implemented');
-    } else {  // $howmuch == 'full'
-      $where = '';  // No where clause finds all records!
-    }
-    $this->danbibDb->query($where);
-    while ($num = $this->danbibDb->fetch()) {
-      $marcclass = new marc();
-      $marcclass->fromString($num['DATA']);
-      output::display("Marc record({$num['LENGTH']}): library={$num['BIBLIOTEK']}, id={$num['ID']}, danbibid={$num['DANBIBID']}");
-      foreach ($marcclass as $marcItem) {
-        $field = $marcItem['field'];
-        if ($field != '000') {
-          output::marcDisplay("   $field {$marcItem['indicator']}");
-          if (is_array($marcItem['subfield'])) {
-            foreach ($marcItem['subfield'] as $subfield) {
-              $subfieldCode = $subfield[0];
-              $subfield = substr($subfield, 1);
-              output::marcDisplay("     $subfieldCode $subfield");
-              if (isset($this->fieldTab[$field][$subfieldCode])) {
-                $match[strtolower($this->fieldTab[$field][$subfieldCode])][] = $subfield;
-              }
-            }
-          }
-        } else {  // $field is NOT '000', and there is nothing to find here, However we can display something if needed
-          output::marcDisplay("   $field {$marcItem['indicator']}");
-          if (is_array($marcItem['subfield'])) {
-            foreach ($marcItem['subfield'] as $subfield) {
-              output::marcDisplay("     $subfield");
-            }
+    if (is_array($howmuch)) {  // In this case, $howmuch contains an array of id's
+      $this->_processDanbibData("where id in ('" . implode("','", $howmuch) . "')");
+    } else if ($howmuch == 'full') {
+      $this->_processDanbibData("");  // The where clause is empty - meaning all id's will be found
+    } else {  // $howmuch == 'inc'
+      $time = 1;
+      while (true) {
+        $this->serviceDb->queryServices();
+        while ($id = $this->serviceDb->fetchId()) {
+          $time = 1;
+          $this->_processDanbibData("where id = '$id'");
+          if (!$this->noupdate) {  // Only remove entry from service table if update is done
+            $this->serviceDb->removeService($id);
           }
         }
+        output::display("Delaying: $time seconds");
+        sleep($time);
+        $time = min(2*$time, 60*VOXB_HARVEST_POLL_TIME);  // Double the time value (with a ceiling value)
       }
-      openXidWrapper::sendupdateIdRequest($this->openxidurl, $num['ID'], $num['DANBIBID'], guessId::guess($match));
-      unset($marcclass);
-      unset($match);
     }
-        $time = 1;
-        
-        // Fetch the data record an get the data
-        
-        // Update OpenXId
-        
-        $sql = "delete from services where serviceno = 3 and id = $idno";
-    //    $this->oci->update($sql);
-    //    $this->oci->commit();
-    //  }
-      
-      $time *= $time;
-      if ($time > 256) $time = 256;
-      sleep($time);
-      
-    //}
-
   }
+
 }
 
 ?>

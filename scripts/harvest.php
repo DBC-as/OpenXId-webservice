@@ -41,7 +41,7 @@ function usage($str='') {
   echo "\t-p <initfile> (default: \"$inifile\") \n";
   echo "\t-f\tfull harvest (if not specified, an incremental harvest is done) \n";
   echo "\t-i <id>\tharvests only the danbib record with identifier <id>. Please note,\n\t\tthat this disables full/incremental harvest.\n\t\tMultiple identifiers may be specified. \n";
-  echo "\t-s\tsilent - no requests are sent to OpenXid \n";
+  echo "\t-n\tno update - no requests are sent to OpenXid\n\t\tPlease note, that in this case, incremental harvest does not remove the entry in the service table \n";
   echo "\t-v\tverbose display \n";
   echo "\t-m\tin verbose, do also output each marc record processed \n";
   echo "\t-h\thelp (shows this message) \n";
@@ -52,7 +52,7 @@ $inifile = $startdir . "/" . "harvest.ini";
 $config = new inifile($inifile);
 if ($config->error) usage($config->error);
 
-$options = getopt('?p:fi:svmh');
+$options = getopt('?p:fi:nvmh');
 if (array_key_exists('h', $options)) usage();
 if (array_key_exists('p', $options)) $inifile = $options['p'];
 
@@ -64,7 +64,7 @@ if (array_key_exists('i', $options)) {
   $howmuch = 'inc';
 }
 $verbose = array();
-if (isset($options['s'])) $verbose['silent'] = true;
+if (isset($options['n'])) $verbose['noupdate'] = true;
 if (isset($options['v'])) $verbose['verbose'] = true;
 if (isset($options['m'])) $verbose['marc'] = true;
 
