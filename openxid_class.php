@@ -323,14 +323,14 @@ class openXId extends webServiceServer {
           $idType = strip_tags($item->_value->idType->_value);
           $idValue = strip_tags(self::_normalize($idType, $item->_value->idValue->_value));
           if (!empty($idValue)) {
-            $id[] = array('idType' => $idType, 'idValue' => $idValue);
+            $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue);  // Use type:value in order to filter out duplicates
           }
         }
       } else {
         $idType = strip_tags($param->id->_value->idType->_value);
         $idValue = strip_tags(self::_normalize($idType, $param->id->_value->idValue->_value));
         if (!empty($idValue)) {
-          $id[] = array('idType' => $idType, 'idValue' => $idValue);
+          $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue);  // Use type:value in order to filter out duplicates
         }
       }
     }
