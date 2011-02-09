@@ -321,16 +321,16 @@ class openXidWrapper {
     $requestDom = new DOMDocument('1.0', 'UTF-8');
     $requestDom->formatOutput = true;
     $soapEnvelope = $requestDom->createElementNS('http://schemas.xmlsoap.org/soap/envelope/', 'soapenv:Envelope');
-    $soapEnvelope->setAttribute('xmlns:oxid', 'http://oss.dbc.dk/ns/openxid');
+    $soapEnvelope->setAttribute('xmlns:xid', 'http://oss.dbc.dk/ns/openxid');
     $requestDom->appendChild($soapEnvelope);
     $soapBody = $soapEnvelope->appendChild($requestDom->createElement('soapenv:Body'));
-    $updateIdRequest = $soapBody->appendChild($requestDom->createElement('oxid:updateIdRequest'));
-    $updateIdRequest->appendChild($requestDom->createElement('oxid:openXId', $openxid));
-    $updateIdRequest->appendChild($requestDom->createElement('oxid:clusterId', $clusterid));
+    $updateIdRequest = $soapBody->appendChild($requestDom->createElement('xid:updateIdRequest'));
+    $updateIdRequest->appendChild($requestDom->createElement('xid:recordId', $openxid));
+    $updateIdRequest->appendChild($requestDom->createElement('xid:clusterId', $clusterid));
     if (is_array($matches)) foreach ($matches as $match) {
-      $id = $updateIdRequest->appendChild($requestDom->createElement('oxid:id'));
-      $id->appendChild($requestDom->createElement('oxid:idType', $match['type']));
-      $id->appendChild($requestDom->createElement('oxid:idValue', $match['id']));
+      $id = $updateIdRequest->appendChild($requestDom->createElement('xid:id'));
+      $id->appendChild($requestDom->createElement('xid:idType', $match['type']));
+      $id->appendChild($requestDom->createElement('xid:idValue', $match['id']));
     }
     return $requestDom->saveXML();
   }
@@ -345,6 +345,7 @@ class openXidWrapper {
     $curl->set_timeout(10);
     $curl->set_post_xml(self::_buildRequest($openxid, $clusterid, $matches));
     $res = $curl->get($url);
+print_r($res);
     $curl->close();
   }
   
