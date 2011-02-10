@@ -47,10 +47,10 @@ field[previousrecordid][] = 002*c
 field[previousrecordid][] = 002*d
 
 ; ISBN-10
-field[isbn][] = 021*a
+field[ean][] = 021*a
 
 ; ISBN-13
-field[isbn][] = 021*e
+field[ean][] = 021*e
 
 ; ISSN
 field[issn][] = 022*a
