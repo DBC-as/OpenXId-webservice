@@ -58,6 +58,7 @@ if (array_key_exists('p', $options)) $inifile = $options['p'];
 
 if (array_key_exists('i', $options)) {
   $howmuch = is_array($options['i']) ? $options['i'] : array($options['i']);  // Make sure, that it is an array
+  foreach ($howmuch as &$i) $i = intval($i);
 } else if (array_key_exists('f', $options)) {
   $howmuch = 'full';
 } else {

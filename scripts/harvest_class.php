@@ -188,8 +188,6 @@ class danbibDatabase {
 
   function query($where) {
     try {
-//      $sql = "select id, danbibid, bibliotek, data from poster where rownum < 200";
-// danbibid in ('4363271','4876910', '17703600')
       $sql = "select id, danbibid, bibliotek, data, length(data) length from poster";
       if (!empty($where)) {
          $sql .= " $where";
@@ -345,7 +343,6 @@ class openXidWrapper {
     $curl->set_timeout(10);
     $curl->set_post_xml(self::_buildRequest($openxid, $clusterid, $matches));
     $res = $curl->get($url);
-print_r($res);
     $curl->close();
   }
   
