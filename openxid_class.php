@@ -52,7 +52,7 @@ class openXId extends webServiceServer {
   *
   */
   private function _getClusterDataByTypeValuePair($type, $value) {
-    $sql = "select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid=(select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))";
+    $sql = "select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))";
     /*
     $sql is constructed like this:
       <select 1> finds idtype as a number with $type as input:
@@ -63,15 +63,15 @@ class openXId extends webServiceServer {
                    = "select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type'))"
       
       <select 3> finds all material in the cluster for the found material:
-        <select 3> = "select idtype, idvalue from oxid_ids where clusterid=<select 2>"
-                   = "select idtype, idvalue from oxid_ids where clusterid=(select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
+        <select 3> = "select idtype, idvalue from oxid_ids where clusterid in (<select 2>)"
+                   = "select idtype, idvalue from oxid_ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
       
       <select 4> finds the string for idtype with the given number as input
         <select 4> = "select name from oxid_id_types where id=$num"
       
       <select 5> is in principle the same as <select 3> - but now fetched idtype as a string:
-        <select 5> = "select <select 4>, idvalue from oxid_ids where clusterid=(select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
-                   = "select (select name from oxid_id_types where id=ids.idtype), idvalue from oxid_ids ids where clusterid=(select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
+        <select 5> = "select <select 4>, idvalue from oxid_ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
+                   = "select (select name from oxid_id_types where id=ids.idtype), idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
     */
     try {
       $this->db->set_query($sql);
