@@ -91,6 +91,7 @@ class openXId extends webServiceServer {
   *
   */
   private function _removeRecordsByRecordId($recordId) {
+    if (empty($recordId)) return false;
     try {
       $sql = "DELETE FROM oxid_ids WHERE recordid=$recordId";
       $this->db->set_query($sql);
@@ -112,8 +113,8 @@ class openXId extends webServiceServer {
       $this->db->set_query($sql);
       $this->db->execute();
       while( $row = $this->db->get_row() ) {
-        $result[$row['id']] = $row['name'];
-        $result[$row['name']] = $row['id'];  // Both ways
+        $result[intval($row['id'])] = $row['name'];
+        $result[$row['name']] = intval($row['id']);  // Both ways
       }
     } catch(Exception $e) {
       verbose::log(ERROR, "openxid:: Couldn't get ID type table: " . $e->__toString());
@@ -140,7 +141,7 @@ class openXId extends webServiceServer {
       verbose::log(ERROR, "openxid:: Couldn't put type value pair: " . $e->__toString());
       return "could not reach database";
     }
-    return $result;
+    return false;
   }
 
 
@@ -315,6 +316,14 @@ class openXId extends webServiceServer {
       return $ret;
     }
 
+    // get conversion table between binary idType id's and textual idTypes
+    if (is_string($this->idTypeTable = $this->_getIdTypeTable())) {
+      $xid_error = &$xid_updateIdResponse->_value->error;
+      $xid_error->_value = "could not reach database";
+      $xid_error->_namespace = $this->xmlns['xid'];
+      return $ret;
+    }
+
     $recordId = strip_tags($param->recordId->_value);
     $clusterId = strip_tags($param->clusterId->_value);
     if (isset($param->id)) {
@@ -329,8 +338,16 @@ class openXId extends webServiceServer {
       } else {
         $idType = strip_tags($param->id->_value->idType->_value);
         $idValue = strip_tags(self::_normalize($idType, $param->id->_value->idValue->_value));
-        if (!empty($idValue)) {
-          $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue);  // Use type:value in order to filter out duplicates
+        if (!is_string($idType) or !array_key_exists($idType, $this->idTypeTable)) {  // Error: Invalid idType
+          $idValue = $param->id->_value->idValue->_value;  // The "not normalized" idValue (normalized value cannot be used)
+          $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue, 'error' => 'invalid idType');  // Use type:value in order to filter out duplicates
+        } else {
+          if (empty($idValue)) {  // If normalizing returns a zero, it means that the id was invalid
+            $idValue = $param->id->_value->idValue->_value;  // The "not normalized" idValue
+            $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue, 'error' => 'invalid id');  // Use type:value in order to filter out duplicates
+          } else {
+            $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue);  // Use type:value in order to filter out duplicates
+          }
         }
       }
     }
@@ -343,24 +360,22 @@ class openXId extends webServiceServer {
       return $ret;
     }
 
-    // get conversion table between binary idType id's and textual idTypes
-    if (is_string($this->idTypeTable = $this->_getIdTypeTable())) {
-      $xid_error = &$xid_updateIdResponse->_value->error;
-      $xid_error->_value = "could not reach database";
-      $xid_error->_namespace = $this->xmlns['xid'];
-      return $ret;
-    }
-
     // Then - add all listed materials in <id> tag
     if (is_array($id)) {
       foreach ($id as $key=>$item) {
-        $id[$key]['error'] = $this->_putIdTypeValue($recordId, $clusterId, $item['idType'], $item['idValue']);
+        if (!isset($item['error'])) {
+          $id[$key]['error'] = $this->_putIdTypeValue($recordId, $clusterId, $item['idType'], $item['idValue']);
+        }
       }
     }
 
     // Format output xml
-    $xid_updateIdStatus = &$xid_updateIdResponse->_value->updateIdStatus;
-    if (is_array($id)) {
+    if (!is_array($id)) {
+      $xid_error = &$xid_updateIdResponse->_value->error;
+      $xid_error->_namespace = $this->xmlns['xid'];
+      $xid_error->_value = 'no results found for requested id';
+    } else {  // $id IS an array
+      $xid_updateIdStatus = &$xid_updateIdResponse->_value->updateIdStatus;
       foreach ($id as $item) {
         unset($status_item);
         $status_item->_namespace = $this->xmlns['xid'];;
