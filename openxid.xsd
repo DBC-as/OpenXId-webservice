@@ -140,7 +140,7 @@
 		</xs:annotation>
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element ref="xid:id"/>
+				<xs:element ref="xid:id" minOccurs="0"/>
 				<xs:choice>
 					<xs:element ref="xid:updateIdOk"/>
 					<xs:element ref="xid:error"/>
