@@ -30,7 +30,7 @@ require_once("$startdir/OLS_class_lib/curl_class.php");
 define('VOXB_SERVICE_NUMBER', 4);               // Service number for the Voxb Service
 define('VOXB_HARVEST_POLL_TIME', 5);            // Time given in minutes
 define('PROGRESS_INDICATOR_LINE_LENGTH', 100);  // Number of periods in a progression indicator line
-define('PROGRESS_INDICATOR_CHUNK', 100);        // Size of chunks to process for each period to be echoed 
+define('PROGRESS_INDICATOR_CHUNK', 100);        // Size of chunks to process for each period to be echoed
 
 //==============================================================================
 
@@ -38,15 +38,15 @@ class output {
   static $enabled;  // Echo enable flag
   static $marcEnabled;  // Echo marc enable flag
   private function __construct() {}
-  
+
   function enable($flag) {
     self::$enabled = $flag;
   }
-  
+
   function marcEnable($flag) {
     self::$marcEnabled = $flag;
   }
-  
+
   function open($logfile, $mask) {
     verbose::open($logfile, $mask);
   }
@@ -54,21 +54,21 @@ class output {
   function log($verboselevel, $text) {
     verbose::log($verboselevel, $text);
   }
-  
+
   function display($text) {
     if (self::$enabled) {
       echo $text . "\n";
     }
     self::log(TRACE, $text);
   }
-  
+
   function marcDisplay($text) {
     if (self::$marcEnabled) {
       echo $text . "\n";
     }
     self::log(TRACE, $text);
   }
-  
+
   function die_log($text) {
     echo $text . "\n";
     self::log(FATAL, $text);
@@ -126,7 +126,7 @@ class serviceDatabase {
       output::die_log($e);
     }
   }
-  
+
   function queryServices() {
     try {
       $this->oci->set_query('select id from services where service = ' . VOXB_SERVICE_NUMBER);
@@ -134,7 +134,7 @@ class serviceDatabase {
       output::die_log($e);
     }
   }
-  
+
   function fetchId() {
     try {
       $ret = $this->oci->fetch_into_assoc();
@@ -170,7 +170,7 @@ class danbibDatabase {
       output::die_log($e);
     }
   }
-  
+
   private function _queryOverflow($id) {
     try {
       $sql = "select id, lbnr, data, length(data) length from poster_overflow where id = $id order by lbnr";
@@ -178,7 +178,7 @@ class danbibDatabase {
     } catch (ociException $e) {
       output::die_log($e);
     }
-    
+
   }
 
   private function _fetchOverflow() {
@@ -197,7 +197,7 @@ class danbibDatabase {
       output::die_log($e);
     }
   }
-  
+
   function fetch() {
     $data = $this->oci->fetch_into_assoc();
     if ($data['LENGTH'] >= 4000) {
@@ -284,18 +284,18 @@ class guessId {
       }
     }
     // Run through all parameters, and check for the remaining 'ean', 'issn' and 'materialid'
-    foreach ($par as $type => $ids) {
+    if (is_array($par)) foreach ($par as $type => $ids) {
       $type = strtolower($type);
       // If type is either 'ean' or 'issn', then these are used directly
       if (($type == 'ean') or ($type == 'issn')) {
-        foreach ($ids as $id) {
+        if (is_array($ids)) foreach ($ids as $id) {
           $ret[] = array('type' => $type, 'id' => $id);
           output::display(" Found identification: $type($id) - Reason: [$type] is found");
         }
       }
       // If type is materialid, these contains EAN numbers - if they are valid
       if (($type == 'materialid')) {
-        foreach ($ids as $id) {
+        if (is_array($ids)) foreach ($ids as $id) {
           if (materialId::validateEAN(materialId::normalizeEAN($id))) {  // If id is a valid EAN number - then just go ahead
             $ret[] = array('type' => 'ean', 'id' => $id);
             output::display(" Found identification: ean($id) - Reason: [materialid] is found, and is a valid EAN number");
@@ -314,7 +314,7 @@ class openXidWrapper {
   static $enabled;
 
   private function __construct() {}
-  
+
   private function _buildRequest($openxid, $clusterid, $matches) {
     $requestDom = new DOMDocument('1.0', 'UTF-8');
     $requestDom->formatOutput = true;
@@ -345,7 +345,7 @@ class openXidWrapper {
     $res = $curl->get($url);
     $curl->close();
   }
-  
+
 }
 
 
@@ -370,7 +370,7 @@ class harvest {
     // Construct the fieldTab table - translating field/subfield to identifier types
     $this->fieldTab = array();
     $fieldFromIni = $config->get_value('field', 'marc');
-    foreach ($fieldFromIni as $key => $values) {
+    if (is_array($fieldFromIni)) foreach ($fieldFromIni as $key => $values) {
       if (is_array($values))
         foreach ($values as $val) {
           list($field, $subfield) = explode('*', $val, 2);
@@ -387,7 +387,7 @@ class harvest {
     $marcclass = new marc();
     $marcclass->fromString($num['DATA']);
     output::display("Marc record({$num['LENGTH']}): library={$num['BIBLIOTEK']}, id={$num['ID']}, danbibid={$num['DANBIBID']}");
-    foreach ($marcclass as $marcItem) {
+    if (is_array($marcclass)) foreach ($marcclass as $marcItem) {
       $field = $marcItem['field'];
       if ($field != '000') {
         output::marcDisplay("   $field {$marcItem['indicator']}");
