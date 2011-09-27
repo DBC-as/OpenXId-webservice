@@ -27,7 +27,7 @@ require_once("$startdir/OLS_class_lib/pg_database_class.php");
 require_once("$startdir/OLS_class_lib/material_id_class.php");
 require_once("$startdir/OLS_class_lib/curl_class.php");
 
-define('VOXB_SERVICE_NUMBER', 4);               // Service number for the Voxb Service
+define('VOXB_SERVICE_NUMBER', 7);               // Service number for the Voxb Service
 define('VOXB_HARVEST_POLL_TIME', 5);            // Time given in minutes
 define('PROGRESS_INDICATOR_LINE_LENGTH', 100);  // Number of periods in a progression indicator line
 define('PROGRESS_INDICATOR_CHUNK', 100);        // Size of chunks to process for each period to be echoed
@@ -385,9 +385,9 @@ class harvest {
 
   private function _processMarcRecord($num) {
     $marcclass = new marc();
-    $marcclass->fromString($num['DATA']);
+    $marcclass->fromIso($num['DATA']);
     output::display("Marc record({$num['LENGTH']}): library={$num['BIBLIOTEK']}, id={$num['ID']}, danbibid={$num['DANBIBID']}");
-    if (is_array($marcclass)) foreach ($marcclass as $marcItem) {
+    foreach ($marcclass as $marcItem) {
       $field = $marcItem['field'];
       if ($field != '000') {
         output::marcDisplay("   $field {$marcItem['indicator']}");
