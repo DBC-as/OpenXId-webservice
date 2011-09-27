@@ -430,7 +430,7 @@ class harvest {
       output::die_log('No identifiers specified');
     }
     if (is_array($howmuch)) {  // In this case, $howmuch contains an array of id's
-      $this->_processDanbibData("where id in ('" . implode("','", $howmuch) . "')");
+      $this->_processDanbibData("where id in (" . implode(",", $howmuch) . ")");
     } else if ($howmuch == 'full') {
       $this->_processDanbibData("");  // The where clause is empty - meaning all id's will be found
     } else {  // $howmuch == 'inc'
@@ -439,7 +439,7 @@ class harvest {
         $this->serviceDb->queryServices();
         while ($id = $this->serviceDb->fetchId()) {
           $time = 1;
-          $this->_processDanbibData("where id = '$id'");
+          $this->_processDanbibData("where id = $id");
           if (!$this->noupdate) {  // Only remove entry from service table if update is done
             $this->serviceDb->removeService($id);
           }
