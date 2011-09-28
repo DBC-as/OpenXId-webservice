@@ -327,26 +327,18 @@ class openXId extends webServiceServer {
     $recordId = strip_tags($param->recordId->_value);
     $clusterId = strip_tags($param->clusterId->_value);
     if (isset($param->id)) {
-      if (is_array($param->id)) {
-        foreach ($param->id as $item) {
-          $idType = strip_tags($item->_value->idType->_value);
-          $idValue = strip_tags(self::_normalize($idType, $item->_value->idValue->_value));
-          if (!empty($idValue)) {
-            $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue);  // Use type:value in order to filter out duplicates
-          }
-        }
-      } else {
-        $idType = strip_tags($param->id->_value->idType->_value);
-        $idValue = strip_tags(self::_normalize($idType, $param->id->_value->idValue->_value));
+      if (!is_array($param->id)) $param->id = array($param->id);  // Assure, that this is an array
+      foreach ($param->id as $item) {
+        $idType = strip_tags($item->_value->idType->_value);
+        $idValue = strip_tags($item->_value->idValue->_value);
+        $normalizedValue = self::_normalize($idType, $idValue);
         if (!is_string($idType) or !array_key_exists($idType, $this->idTypeTable)) {  // Error: Invalid idType
-          $idValue = $param->id->_value->idValue->_value;  // The "not normalized" idValue (normalized value cannot be used)
           $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue, 'error' => 'invalid idType');  // Use type:value in order to filter out duplicates
         } else {
-          if (empty($idValue)) {  // If normalizing returns a zero, it means that the id was invalid
-            $idValue = $param->id->_value->idValue->_value;  // The "not normalized" idValue
+          if (empty($normalizedValue)) {  // If normalizing returns a zero, it means that the id was invalid
             $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue, 'error' => 'invalid id');  // Use type:value in order to filter out duplicates
           } else {
-            $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue);  // Use type:value in order to filter out duplicates
+            $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $normalizedValue);  // Use type:value in order to filter out duplicates
           }
         }
       }
