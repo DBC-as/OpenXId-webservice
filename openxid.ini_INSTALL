@@ -13,8 +13,8 @@ wsdl = openxid.wsdl
 ;show_samples = 1
 
 ; validate
-;validate[soap_request] = soap.xsd
-;validate[request] = openxid.xsd
+validate[soap_request] = soap.xsd
+validate[request] = openxid.xsd
 ;validate[response] = openxid.xsd
 
 ; soapActions and their corresponding request structure
