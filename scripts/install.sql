@@ -1,3 +1,6 @@
+/**
+@DEPRECATED Use create_tables.php instead.
+*/
 DROP TABLE oxid_ids;
 DROP TABLE oxid_id_types;
 
