@@ -363,12 +363,14 @@ class openXId extends webServiceServer {
 
     // Format output xml
     if (!is_array($id)) {
-      $xid_error = &$xid_updateIdResponse->_value->error;
-      $xid_error->_namespace = $this->xmlns['xid'];
-      $xid_error->_value = 'no results found for requested id';
-    } else {  // $id IS an array
       $xid_updateIdStatus = &$xid_updateIdResponse->_value->updateIdStatus;
+      $xid_updateIdOk = &$status_item->_value->updateIdOk;
+      $xid_updateIdOk->_namespace = $this->xmlns['xid'];
+      $xid_updateIdStatus = $status_item;
+      $xid_updateIdStatus->_namespace = $this->xmlns['xid'];
+    } else {  // $id IS an array
       foreach ($id as $item) {
+        $xid_updateIdStatus = &$xid_updateIdResponse->_value->updateIdStatus;
         unset($status_item);
         $status_item->_namespace = $this->xmlns['xid'];;
         $xid_id = &$status_item->_value->id;
