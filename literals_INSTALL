@@ -7,5 +7,5 @@
 # ============================================================================
 
 FORS_CREDENTIALS=user/pass@server.dk
-OXID_CREDENTIALS=<server.dk> dbname=<dbase> user=<user> password=<pass>
+OXID_CREDENTIALS=host=<server.dk> dbname=<dbase> user=<user> password=<pass>
 OPENXID_URL=http://openxid.addi.dk/x.y
