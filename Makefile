@@ -23,7 +23,7 @@ SOURCES=$(patsubst %.php,%.chk,$(wildcard *.php))
 #			Targets
 # ============================================================================
 
-all: install compile test
+all: install compile test doxygen
 
 compile: $(SOURCES)
 
@@ -47,3 +47,6 @@ install:
 literals:
 	@echo "Before installation, please copy literals_INSTALL to literals, and edit"
 	@exit 1
+
+doxygen:
+	doxygen openxid.doxygen
