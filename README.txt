@@ -26,6 +26,18 @@ OpenXId is a part of the VoxB web-service.
 
 <h2 style="border-bottom: 1px solid;">Installation</h2>
 
+Prerequisites:
+<ul>
+    <li>A Linux server with the following software installed (version either the same or newer):</li>
+        <ul>
+            <li>Linux: 2.6.32-bpo.5-amd64 #1 SMP Wed Jul 20 09:10:04 UTC 2011 x86_64</li>
+            <li>Apache: Apache/2.2.9 (Debian)</li>
+            <li>PHP: 5.2.6-1+lenny13</li>
+       </ul>
+
+    </li>
+</ul>
+
 Pre-installation tasks:
 <ul>
     <li>In the php.ini file: always_populate_raw_post_data = On</li>
