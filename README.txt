@@ -39,7 +39,7 @@ Pre-installation tasks:
        </ul>
 </ul>
 
-Example of an installation of release 0.1 on machine crumbal.dbc.dk
+Example of an installation of release 0.1 on machine cumbal.dbc.dk
 <ul>
     <li>cd /data/www</li>
     <li>svn co https://svn.dbc.dk/repos/php/OpenLibrary/OpenXId/tags/release.0.1 /data/www/openxid/0.1</li>
@@ -48,7 +48,7 @@ Example of an installation of release 0.1 on machine crumbal.dbc.dk
     <li>edit literals
         <ul>
              <li>FORS_CREDENTIALS=user/pass\@server.dk</li>
-             <li>OXID_CREDENTIALS=<server.dk> dbname=<dbase> user=<user> password=<pass></li>
+             <li>OXID_CREDENTIALS=host=<server.dk> dbname=<dbase> user=<user> password=<pass></li>
              <li>OPENXID_URL=http://openxid.addi.dk/0.1</li>           
         </ul>
     </li>
@@ -84,7 +84,7 @@ If lines, in the logfiles, starting with “ERROR” or “FATAL” please take 
 
 <dl>
   <dt>Persons to be contacted:</dt>
-      <dd>Hans-Henrik, Martin K., Steen L., Allan F.</dd>
+      <dd>Hans-Henrik, Martin K., Steen L. F., Allan F.</dd>
 
    <dt>Persons to be informed:</dt>
       <dd>Per Mogens P., Marianne D., Anders V.</dd>
