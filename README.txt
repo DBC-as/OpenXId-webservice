@@ -67,10 +67,12 @@ Example of an installation of release 0.1 on machine cumbal.dbc.dk
     <li>call: make
         <ul> 
             <li>make test all ”php” modules for syntax errors and makes a copy of the different “INSTALL” files. </li>
-            <li>make recognised the following options: all, install, doxygen and compile.</li>
+            <li>make recognises the following options: all, install, doxygen and compile.</li>
         </ul>
     </li>
     <li>Make the relevant tables, indexes etc. in the database: “php create_tables.php”</li>
+    <li>Copy openxid.wsdl_INSTALL to openxid.wsdl and modify the location of the service (at the end of the file)</li>
+    <li>Consider copying robots.txt_INSTALL to robots.txt</li>
  </ul>
  
  <h2 style="border-bottom: 1px solid;">Installation of Harvester</h2>
