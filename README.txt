@@ -4,11 +4,11 @@
 
 <h2 style="border-bottom: 1px solid;">Documentation of the Web-service</h2>
 <a href="http://oss.dbc.dk/plone/search?SearchableText=openxid">http://oss.dbc.dk/plone/search?SearchableText=openxid</a>
-<p /> 
+<p></p>
 
 <h2 style="border-bottom: 1px solid;">Description of the web-service</h2>
-In the DANBIB system, marc-records is grouped together in <i>clusters</i>.<br />
-A <i>cluster</i> is marc-records which the system has detected as being the same material.<br />
+<p>In the DANBIB system, marc-records is grouped together in <i>clusters</i>.</p>
+<p>A <i>cluster</i> is marc-records which the system has detected as being the same material.</p>
 Every marc-record in the cluster has from one to many ids. It can be ISBN, ISBN13, and FAUST etc. 
 
 OpenXId takes the Clusters from DANBIB and extract the numbers from the records and store them in the OpenXId database.
@@ -42,8 +42,8 @@ Pre-installation tasks:
 <ul>
     <li>In the php.ini file: always_populate_raw_post_data = On</li>
     <li>There will be a postgres instants running and reachable from the current machine</li>
-    <li>Make a database:”<dbase>” </li>
-    <li>Make a user with access to openxid: user=<user> password=<pass></li>
+    <li>Make a database:”&lt;dbase&gt;” </li>
+    <li>Make a user with access to openxid: user=&lt;user&gt; password=&lt;pass&gt;</li>
     <li>Update the name-servers so  sub-domain: openxid.addi.dk point at the current machine:/data/www/openxid.addi.dk</li>
     <li>Make a directory as the following:
         <ul>
@@ -60,7 +60,7 @@ Example of an installation of release 0.1 on machine cumbal.dbc.dk
     <li>edit literals
         <ul>
              <li>FORS_CREDENTIALS=user/pass\@server.dk</li>
-             <li>OXID_CREDENTIALS=host=<server.dk> dbname=<dbase> user=<user> password=<pass></li>
+             <li>OXID_CREDENTIALS=host=&lt;server.dk&gt; dbname=&lt;dbase&gt; user=&lt;user&gt; password=&lt;pass&gt;</li>
              <li>OPENXID_URL=http://openxid.addi.dk/0.1</li>           
         </ul>
     </li>
@@ -88,7 +88,7 @@ Example of an installation of release 0.1 on machine cumbal.dbc.dk
               <li>drwxr-xr-x 3 www-data sideejer 102400 2011-06-30 06:25 /data/tracelogs/</li>
        </ul>
     </li>
-    <li>Insert  “php <www-dir>/openxid/<version>/harvest.php in init.d</i>
+    <li>Insert  “php <www-dir>/openxid/&lt;version&gt;/harvest.php in init.d</li>
 </ul>
 
 <h2 style="border-bottom: 1px solid;">Error handling</h2>
@@ -102,7 +102,8 @@ If lines, in the logfiles, starting with “ERROR” or “FATAL” please take 
       <dd>Per Mogens P., Marianne D., Anders V.</dd>
   </dl>
 
- <p />
+ <p></p>
+ 
  <h1 style="border-bottom: 1px solid; text-align:left">Copyright information</h1>  
 @verbatim
 * WebService, Copyright(c) 2009, DBC
