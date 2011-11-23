@@ -56,8 +56,3 @@ call: make
 
 Make the relevant tables, indexes etc. in the database: “php create_tables.php” 
 
-Copy openxid.wsdl_INSTALL to openxid.wsdl and modify
-the location of the service (at the end of the file)
-
-Consider copying robots.txt_INSTALL to robots.txt
-
