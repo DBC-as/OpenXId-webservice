@@ -23,9 +23,12 @@ SOURCES=$(patsubst %.php,%.chk,$(wildcard *.php))
 #			Targets
 # ============================================================================
 
-all: install compile test doxygen
+all: install compile makeharvester test doxygen
 
 compile: $(SOURCES)
+
+makeharvester:
+	cd scripts; make
 
 %.chk: %.php
 	$(CC) $<
