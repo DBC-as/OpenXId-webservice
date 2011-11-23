@@ -29,7 +29,7 @@ xmlns[xid] = http://oss.dbc.dk/ns/openxid
 xmldir = ./xml
 
 ; logfile for verbose output
-logfile = /tmp/openxid.log
+logfile = openxid.log
 
 ; set verboselevel
 ;   WARNING - simple warnings
