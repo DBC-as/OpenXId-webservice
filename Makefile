@@ -49,7 +49,6 @@ install:
 
 literals:
 	@echo "Before installation, please copy literals_INSTALL to literals, and edit"
-	@exit 1
 
 doxygen:
 	doxygen openxid.doxygen
