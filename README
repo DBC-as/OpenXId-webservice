@@ -46,9 +46,9 @@ svn co https://svn.dbc.dk/repos/php/OpenLibrary/OpenXId/tags/release.0.1 /data/w
 cd openxid/0.1/scripts
 cp literals_INSTALL literals
 edit literals:
-  * FORS_CREDENTIALS=user/pass@server.dk
-  * OXID_CREDENTIALS=host=<server.dk> dbname=<dbase> user=<user> password=<pass>
-  * OPENXID_URL=http://openxid.addi.dk/0.1
+  * OCI_LOGON=user/pass@server.dk/server.dk
+  * SERVICE_LOGON=user/pass@server.dk/server.dk
+  * OPENXID_URL=http://openxid.addi.dk/x.y
 
 call: make
   * make test all ”php” modules for syntax errors and makes a copy of the different “INSTALL” files.
