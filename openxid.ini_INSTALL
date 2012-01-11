@@ -103,7 +103,7 @@ action[getIdsRequest][id][] = id.idType
 action[getIdsRequest][id][] = idValue
 action[getIdsRequest][id][] = id.idValue
 
-action[updateIdRequest][] = xId
+action[updateIdRequest][] = recordId
 action[updateIdRequest][] = clusterId
 action[updateIdRequest][id][] = idType
 action[updateIdRequest][id][] = id.idType

@@ -52,7 +52,9 @@ class openXId extends webServiceServer {
   *
   */
   private function _getClusterDataByTypeValuePair($type, $value) {
+    verbose::log(DEBUG, "openxid:: _getClusterDataByTypeValuePair($type, $value);");
     $sql = "select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))";
+    verbose::log(DEBUG, "openxid::  -> SQL: $sql");
     /*
     $sql is constructed like this:
       <select 1> finds idtype as a number with $type as input:
@@ -91,9 +93,11 @@ class openXId extends webServiceServer {
   *
   */
   private function _removeRecordsByRecordId($recordId) {
+    verbose::log(DEBUG, "openxid:: _removeRecordsByRecordId($recordId);");
     if (empty($recordId)) return false;
     try {
       $sql = "DELETE FROM oxid_ids WHERE recordid=$recordId";
+      verbose::log(DEBUG, "openxid::  -> SQL: $sql");
       $this->db->set_query($sql);
       $this->db->execute();
     } catch(Exception $e) {
@@ -108,8 +112,10 @@ class openXId extends webServiceServer {
   *
   */
   private function _getIdTypeTable() {
+    verbose::log(DEBUG, "openxid:: _getIdTypeTable();");
     try {
       $sql = "SELECT id, name FROM oxid_id_types";
+      verbose::log(DEBUG, "openxid::  -> SQL: $sql");
       $this->db->set_query($sql);
       $this->db->execute();
       while( $row = $this->db->get_row() ) {
@@ -127,6 +133,7 @@ class openXId extends webServiceServer {
   *
   */
   private function _putIdTypeValue($recordId, $clusterId, $idType, $idValue) {
+    verbose::log(DEBUG, "openxid:: _putIdTypeValue($recordId, $clusterId, $idType, $idValue);");
     $recordId = strip_tags($recordId);
     $clusterId = strip_tags($clusterId);
     $idType = strtolower(strip_tags($idType));
@@ -135,6 +142,7 @@ class openXId extends webServiceServer {
     $idValue = strip_tags($idValue);
     try {
       $sql = "INSERT INTO oxid_ids (idtype, idvalue, recordid, clusterid) VALUES ($idType,'$idValue',$recordId,$clusterId)";
+      verbose::log(DEBUG, "openxid::  -> SQL: $sql");
       $this->db->set_query($sql);
       $this->db->execute();
     } catch(Exception $e) {
@@ -156,7 +164,7 @@ class openXId extends webServiceServer {
         if ($ean) return $ean;  // Yes it was...
         // Check if number is an ISBN number
         $idValue = materialId::validateISBN(materialId::normalizeISBN($idValue));
-        if ($idValue == 0) return 0;  // No - it was neither a EAN nor an ISBN number
+        if ($idValue === 0) return 0;  // No - it was neither a EAN nor an ISBN number
         return materialId::convertISBNToEAN($idValue);  // It was an ISBN number - convert to EAN
       case 'issn':
         return materialId::validateISSN(materialId::normalizeISSN($idValue));
@@ -193,6 +201,7 @@ class openXId extends webServiceServer {
   *
   */
   function getIdsRequest($param) {
+    verbose::log(DEBUG, "openxid:: getIdsRequest(...);");
     $xid_getIdsResponse = &$ret->getIdsResponse;
     $xid_getIdsResponse->_namespace = $this->xmlns['xid'];
 
@@ -299,6 +308,7 @@ class openXId extends webServiceServer {
   *
   */
   function updateIdRequest($param) {
+    verbose::log(DEBUG, "openxid:: updateIdRequest(...);");
     $xid_updateIdResponse = &$ret->updateIdResponse;
     $xid_updateIdResponse->_namespace = $this->xmlns['xid'];
 
