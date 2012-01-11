@@ -33,7 +33,7 @@ field[recordid][] = 001*a
 ; used for generating localid ([librayid][recordid]) if 001*a is not faust
 field[libraryid][] = 001*b
 
-; if FAUST, 001*a is faust, otherwise 001*a is local
+; if FAUST, 001*a is faust, isbn, ean otherwise 001*a is local
 field[recordidtype][] = 001*t
 
 ; previous faust

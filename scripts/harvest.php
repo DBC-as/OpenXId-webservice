@@ -37,10 +37,11 @@ function usage($str='') {
     $version_text = isset($config) ? " - version {$config->get_value("version", "setup")}" : "";
     echo "OpenXId Harvest$version_text\n\n";
   }
-  echo "Usage: \n\$ php $argv[0]\n";
+  echo "Usage: \n\$ $argv[0] [-p <initfile>] [-f] [-i <id>] [-l] [-n] [-v] [-m] [-h]\n";
   echo "\t-p <initfile> (default: \"$inifile\") \n";
   echo "\t-f\tfull harvest (if not specified, an incremental harvest is done) \n";
   echo "\t-i <id>\tharvests only the danbib record with identifier <id>. Please note,\n\t\tthat this disables full/incremental harvest.\n\t\tMultiple identifiers may be specified. \n";
+  echo "\t-l\tloop mode - when doing an incremental harvest, start over when one harvest is done \n";
   echo "\t-n\tno update - no requests are sent to OpenXid\n\t\tPlease note, that in this case, incremental harvest does not remove the entry in the service table \n";
   echo "\t-v\tverbose display \n";
   echo "\t-m\tin verbose, do also output each marc record processed \n";
@@ -52,7 +53,7 @@ $inifile = $startdir . "/" . "harvest.ini";
 $config = new inifile($inifile);
 if ($config->error) usage($config->error);
 
-$options = getopt('?p:fi:nvmh');
+$options = getopt('?p:fi:nlvmh');
 if (array_key_exists('h', $options)) usage();
 if (array_key_exists('p', $options)) $inifile = $options['p'];
 
@@ -68,8 +69,12 @@ $verbose = array();
 if (isset($options['n'])) $verbose['noupdate'] = true;
 if (isset($options['v'])) $verbose['verbose'] = true;
 if (isset($options['m'])) $verbose['marc'] = true;
-
-$harvest = new harvest($config, $verbose);
-$harvest->execute($howmuch);
+$loop = isset($options['l']);
+try {
+  $harvest = new harvest($config, $verbose, $loop);
+  $harvest->execute($howmuch);
+} catch (Exception $e) {
+  echo 'Harvest Error: ' . $e->getMessage() . "\n";
+};
 
 ?>

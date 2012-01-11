@@ -32,6 +32,7 @@ define('VOXB_HARVEST_POLL_TIME', 5);            // Time given in minutes
 define('PROGRESS_INDICATOR_LINE_LENGTH', 100);  // Number of periods in a progression indicator line
 define('PROGRESS_INDICATOR_CHUNK', 100);        // Size of chunks to process for each period to be echoed
 
+
 //==============================================================================
 
 class output {
@@ -55,18 +56,25 @@ class output {
     verbose::log($verboselevel, $text);
   }
 
-  function display($text) {
+  function trace($text) {
     if (self::$enabled) {
       echo $text . "\n";
     }
     self::log(TRACE, $text);
   }
 
-  function marcDisplay($text) {
+  function marcTrace($text) {
     if (self::$marcEnabled) {
       echo $text . "\n";
     }
     self::log(TRACE, $text);
+  }
+
+  function error($error) {
+    if (self::$enabled) {
+      echo $error . "\n";
+    }
+    self::log(ERROR, $error);
   }
 
   function die_log($text) {
@@ -89,6 +97,7 @@ class progressIndicator {
 
   function __destruct() {
     if (!$this->enabled) return;
+    if ($this->counter==0) return;
     echo "  (" . strval($this->counter+1) . ")\n";
   }
 
@@ -106,7 +115,6 @@ class progressIndicator {
         echo "  (" . strval($this->counter+1) . ")\n";
       }
     }
-
   }
 }
 
@@ -123,7 +131,8 @@ class serviceDatabase {
       $this->ociDelete = new Oci($authentication);
       $this->ociDelete->connect();
     } catch (ociException $e) {
-      output::die_log($e);
+      output::error($e->getMessage());
+      throw new Exception('Service Database could not be opened');
     }
   }
 
@@ -131,17 +140,19 @@ class serviceDatabase {
     try {
       $this->oci->set_query('select id from services where service = ' . VOXB_SERVICE_NUMBER);
     } catch (ociException $e) {
-      output::die_log($e);
+      output::error($e->getMessage());
+      throw new Exception('Service Database could not be queried');
     }
   }
 
   function fetchId() {
     try {
       $ret = $this->oci->fetch_into_assoc();
+      return $ret['ID'];
     } catch (ociException $e) {
-      output::die_log($e);
+      output::error($e->getMessage());
+      throw new Exception('Could not fetch ID from Service Database');
     }
-    return $ret['ID'];
   }
 
   function removeService($idno) {
@@ -149,7 +160,8 @@ class serviceDatabase {
       $this->ociDelete->set_query("delete from services where service = " . VOXB_SERVICE_NUMBER . " and id = $idno");
       $this->ociDelete->commit();
     } catch (ociException $e) {
-      output::die_log($e);
+      output::error($e->getMessage());
+      throw new Exception('Could not remove ID from Service Database: ' . $idno);
     }
   }
 }
@@ -167,7 +179,8 @@ class danbibDatabase {
       $this->ociOverflow = new Oci($authentication);
       $this->ociOverflow->connect();
     } catch (ociException $e) {
-      output::die_log($e);
+      output::error($e->getMessage());
+      throw new Exception('Danbib Database could not be opened');
     }
   }
 
@@ -176,14 +189,18 @@ class danbibDatabase {
       $sql = "select id, lbnr, data, length(data) length from poster_overflow where id = $id order by lbnr";
       $this->ociOverflow->set_query($sql);
     } catch (ociException $e) {
-      output::die_log($e);
+      output::error($e->getMessage());
+      throw new Exception('Danbib Database could not be queried for overflow data');
     }
-
   }
 
   private function _fetchOverflow() {
-    $data = $this->ociOverflow->fetch_into_assoc();
-    return $data;
+    try {
+      return $this->ociOverflow->fetch_into_assoc();
+    } catch (ociException $e) {
+      output::error($e->getMessage());
+      throw new Exception('Could not fetch overflow data from Danbib Database');
+    }
   }
 
   function query($where) {
@@ -194,22 +211,28 @@ class danbibDatabase {
       }
       $this->oci->set_query($sql);
     } catch (ociException $e) {
-      output::die_log($e);
+      output::error($e->getMessage());
+      throw new Exception('Danbib Database could not be queried');
     }
   }
 
   function fetch() {
-    $data = $this->oci->fetch_into_assoc();
-    if ($data['LENGTH'] >= 4000) {
-      $this->_queryOverflow($data['ID']);
-      do {
-        $overflow = $this->_fetchOverflow();
-        $data['DATA'] .= $overflow['DATA'];
-        $data['LENGTH'] += $overflow['LENGTH'];
-        $tjek = strlen($data['DATA']);
-      } while ($overflow['LENGTH'] >= 4000);
+    try {
+      $data = $this->oci->fetch_into_assoc();
+      if ($data['LENGTH'] >= 4000) {
+        $this->_queryOverflow($data['ID']);
+        do {
+          $overflow = $this->_fetchOverflow();
+          $data['DATA'] .= $overflow['DATA'];
+          $data['LENGTH'] += $overflow['LENGTH'];
+          $tjek = strlen($data['DATA']);
+        } while ($overflow['LENGTH'] >= 4000);
+      }
+      return $data;
+    } catch (ociException $e) {
+      output::error($e->getMessage());
+      throw new Exception('Could not fetch data from Danbib Database');
     }
-    return $data;
   }
 }
 
@@ -221,30 +244,28 @@ class guessId {
     $recordidtype = strtolower($par['recordidtype'][0]);  // Only one instance of this par is expected, therefore the first is taken
     $recordid = $par['recordid'][0];  // Only one instance of this par is expected, therefore the first is taken
     $libraryid = $par['libraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
-    if (!empty($recordid)) {  // If recordid exists, then it can either be a faust number or a local number
-      if (($recordidtype == 'faust') and ($recordid[0] != '9')) {  // If recordidtype says faust, AND the first digit is NOT '9' - then we know that this is a faust number
-        $ret[] = array('type' => 'faust', 'id' => $recordid);
-        output::display(" Found identification: faust($recordid) - Reason: [recordid] exist, [recordidtype] says 'faust', and first digit is not '9'");
-      } else {
-        if (!empty($libraryid)) {  // Now we know, that this is not a faust number - if libraryid exist, then we can form a local number
-          $ret[] = array('type' => 'local', 'id' => $libraryid . ':' . $recordid);
-          if ($recordidtype == 'faust') {
-            output::display(" Found identification: local($libraryid:$recordid) - Reason: [recordid] exists, [recordidtype] says 'faust', but first digit is '9'");
-          } else {
-            output::display(" Found identification: local($libraryid:$recordid) - Reason: [recordid] exists and [recordidtype] says '$recordidtype'");
-          }
-        }
-        // However - we would also suspect recordid to contain an isbn or issn number - if this might be true, then do catch it
-        if (materialId::validateIsbn(materialId::normalizeIsbn($recordid))) {
-          $ret[] = array('type' => 'ean', 'id' => $recordid);
-          output::display(" Found identification: ean($recordid) - Reason: [recordid] exists and found to be a local id, but it is also a valid ean number");
-        }
-        if (materialId::validateIssn(materialId::normalizeIssn($recordid))) {
-          $ret[] = array('type' => 'issn', 'id' => $recordid);
-          output::display(" Found identification: issn($recordid) - Reason: [recordid] exists and found to be a local id, but it is also a valid issn number");
-        }
+    
+    if (empty($recordid)) throw new Exception('An empty RecordId was found - this should not be possible');
+    if (empty($libraryid)) throw new Exception('An empty LibraryId was found - this should not be possible');
+    
+    $rtype = 'local';  // If nothing else is found, then this is a local number
+    // First check, if recordid is a faust number
+    if (materialId::validateFaust(materialId::normalizeFaust($recordid))) {
+      if ($recordid[0] != '9') {  // If the first digit is NOT '9' - then we know that this is a faust number
+        $rtype = 'faust';
       }
     }
+    if (materialId::validateIsbn(materialId::normalizeIsbn($recordid))) {
+      $rtype = 'ean';  // Please note, that OpenXid does not accept ISBN - only EAN (which is the same)
+    }
+    if (materialId::validateIssn(materialId::normalizeIssn($recordid))) {
+      $rtype = 'issn';
+    }
+    if (materialId::validateEan(materialId::normalizeEan($recordid))) {
+      $rtype = 'ean';
+    }
+    $ret[] = array('type' => $rtype, 'id' => $recordid);
+    output::trace(" Found identification: $rtype($recordid) - Reason: Trial validations says, that $recordid is of type: '$rtype'");
     // Now, determine if one of the "previous" faust/local numbers exist
     $previousfaustid = $par['previousfaustid'][0];  // Only one instance of this par is expected, therefore the first is taken
     $previouslibraryid = $par['previouslibraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
@@ -253,13 +274,13 @@ class guessId {
       $validfaust = materialId::validateFaust(materialId::normalizeFaust($previousfaustid));
       if ($validfaust and ($previousfaustid[0] != '9')) {  // If previousfaustid is a valid faust, AND the first digit is NOT '9' - then we know that this is a faust number
         $ret[] = array('type' => 'faust', 'id' => $previousfaustid);
-        output::display(" Found identification: faust($previousfaustid) - Reason: [previousfaustid] exists and is a valid faust number and the first digit is not '9'");
+        output::trace(" Found identification: faust($previousfaustid) - Reason: [previousfaustid] exists and is a valid faust number and the first digit is not '9'");
       } else if (!empty($previouslibraryid)) {  // Now we know, that this is not a faust number - if previouslibraryid exist, we can form a local number
         $ret[] = array('type' => 'local', 'id' => $previouslibraryid . ':' . $previousfaustid);
         if ($validfaust) {
-          output::display(" Found identification: local($previouslibraryid:$previousfaustid) - Reason: [previousfaustid] exists and is a valid faust number, but the first digit is '9'");
+          output::trace(" Found identification: local($previouslibraryid:$previousfaustid) - Reason: [previousfaustid] exists and is a valid faust number, but the first digit is '9'");
         } else {
-          output::display(" Found identification: local($previouslibraryid:$previousfaustid) - Reason: [previousfaustid] exists but is not a valid faust number");
+          output::trace(" Found identification: local($previouslibraryid:$previousfaustid) - Reason: [previousfaustid] exists but is not a valid faust number");
         }
       }
     }
@@ -269,16 +290,16 @@ class guessId {
         if (!empty($recid)) {
           if (!empty($previouslibraryid)) {
             $ret[] = array('type' => 'local', 'id' => $previouslibraryid . ':' . $recid);
-            output::display(" Found identification: local($previouslibraryid:$recid) - Reason: [previousrecordid] exists and so does [previouslibraryid]");
+            output::trace(" Found identification: local($previouslibraryid:$recid) - Reason: [previousrecordid] exists and so does [previouslibraryid]");
           }
           // However - we would also suspect $previousrecordid to contain isbn or issn numbers - if this might be true, then do catch them
           if (materialId::validateIsbn(materialId::normalizeIsbn($recid))) {
             $ret[] = array('type' => 'ean', 'id' => $recid);
-            output::display(" Found identification: ean($recid) - Reason: [previousrecordid] exists and found to be a local id, but it is also a valid ean number");
+            output::trace(" Found identification: ean($recid) - Reason: [previousrecordid] exists and found to be a local id, but it is also a valid ean number");
           }
           if (materialId::validateIssn(materialId::normalizeIssn($recid))) {
             $ret[] = array('type' => 'issn', 'id' => $recid);
-            output::display(" Found identification: issn($recid) - Reason: [previousrecordid] exists and found to be a local id, but it is also a valid issn number");
+            output::trace(" Found identification: issn($recid) - Reason: [previousrecordid] exists and found to be a local id, but it is also a valid issn number");
           }
         }
       }
@@ -290,7 +311,7 @@ class guessId {
       if (($type == 'ean') or ($type == 'issn')) {
         if (is_array($ids)) foreach ($ids as $id) {
           $ret[] = array('type' => $type, 'id' => $id);
-          output::display(" Found identification: $type($id) - Reason: [$type] is found");
+          output::trace(" Found identification: $type($id) - Reason: [$type] is found");
         }
       }
       // If type is materialid, these contains EAN numbers - if they are valid
@@ -298,7 +319,7 @@ class guessId {
         if (is_array($ids)) foreach ($ids as $id) {
           if (materialId::validateEAN(materialId::normalizeEAN($id))) {  // If id is a valid EAN number - then just go ahead
             $ret[] = array('type' => 'ean', 'id' => $id);
-            output::display(" Found identification: ean($id) - Reason: [materialid] is found, and is a valid EAN number");
+            output::trace(" Found identification: ean($id) - Reason: [materialid] is found, and is a valid EAN number");
           }
         }
       }
@@ -315,6 +336,18 @@ class openXidWrapper {
 
   private function __construct() {}
 
+  private static function _curl_execute($url, $xml) {
+    $curl = new cURL();
+    $curl->set_timeout(10);
+    $curl->set_post_xml($xml);
+    $res = $curl->get($url);
+    if ($err = $curl->has_error()) throw new Exception('cURL could not communicate with OpenXid: ' . $err);
+    $curl->close();
+    $res_php = unserialize($res);
+    if (!is_object($res_php)) throw new Exception('cURL could not decode status from OpenXid');
+    return $res_php;
+  }
+
   private function _buildRequest($openxid, $clusterid, $matches) {
     $requestDom = new DOMDocument('1.0', 'UTF-8');
     $requestDom->formatOutput = true;
@@ -330,6 +363,7 @@ class openXidWrapper {
       $id->appendChild($requestDom->createElement('xid:idType', $match['type']));
       $id->appendChild($requestDom->createElement('xid:idValue', $match['id']));
     }
+    $updateIdRequest->appendChild($requestDom->createElement('xid:outputType', 'php'));
     return $requestDom->saveXML();
   }
 
@@ -339,11 +373,28 @@ class openXidWrapper {
 
   function sendupdateIdRequest($url, $openxid, $clusterid, $matches) {
     if (!self::$enabled) return;
-    $curl = new cURL();
-    $curl->set_timeout(10);
-    $curl->set_post_xml(self::_buildRequest($openxid, $clusterid, $matches));
-    $res = $curl->get($url);
-    $curl->close();
+    if (!is_array($matches));
+    foreach ($matches as $m) $all_ids[] = "{$m['type']}({$m['id']})";
+    try {
+      $response = self::_curl_execute($url, self::_buildRequest($openxid, $clusterid, $matches));
+    } catch (Exception $e) {
+      output::error($e->getMessage());
+      throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $all_ids));
+    }
+    if (!is_array($response->updateIdResponse->_value->updateIdStatus) ) {
+      output::error('Could not decode answer from OpenXid');
+      throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $all_ids));
+    }
+    $statuses = $response->updateIdResponse->_value->updateIdStatus;
+    $faulty_ids = array();
+    foreach ($statuses as $s) {
+      if (isset($s->_value->error)) {
+        $faulty_ids[] = "{$s->_value->id->_value->idType->_value}({$s->_value->id->_value->idValue->_value})[{$s->_value->error->_value}]";
+      }
+    }
+    if (count($faulty_ids) > 0) {
+      throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $faulty_ids));
+    }
   }
 
 }
@@ -354,13 +405,15 @@ class openXidWrapper {
 
 class harvest {
   private $progress;    // Progress indicator
+  private $loop;        // Loop mode or not
   private $fieldTab;    // Holds translation table for fields/subfields
   private $danbibDb;    // Object holding danbib database
   private $serviceDb;   // Object holding service database
   private $openxidurl;  // URL to the Open Xid Webservice
   private $noupdate;    // Boolean to tell, whether to send data to OpenXId - if false, no data is sent
 
-  function __construct($config, $verbose) {
+  function __construct($config, $verbose, $loop) {
+    $this->loop = $loop;
     $this->progress = new progressIndicator(!(array_key_exists('marc', $verbose) or array_key_exists('verbose', $verbose)));
     output::enable(array_key_exists('verbose', $verbose));
     output::marcEnable(array_key_exists('marc', $verbose) and array_key_exists('verbose', $verbose));
@@ -377,35 +430,45 @@ class harvest {
           $this->fieldTab[$field][$subfield] = $key;
         }
     }
-    $this->danbibDb = new danbibDatabase($config->get_value('ocilogon', 'setup'));
-    $this->serviceDb = new serviceDatabase($config->get_value('servicelogon', 'setup'));
-    $this->openxidurl = $config->get_value('openxidurl', 'setup');
+    try {
+      $this->danbibDb = new danbibDatabase($config->get_value('ocilogon', 'setup'));
+      $this->serviceDb = new serviceDatabase($config->get_value('servicelogon', 'setup'));
+    } catch (Exception $e) {
+      output::error($e->getMessage());
+      throw new Exception('A database error prevented the harvest');
+    }
+    try {
+      $this->openxidurl = $config->get_value('openxidurl', 'setup');
+    } catch (Exception $e) {
+      output::error($e->getMessage());
+      throw new Exception('An error in the communication to OpenXid prevented the harvest');
+    }
   }
 
 
   private function _processMarcRecord($num) {
     $marcclass = new marc();
     $marcclass->fromIso($num['DATA']);
-    output::display("Marc record({$num['LENGTH']}): library={$num['BIBLIOTEK']}, id={$num['ID']}, danbibid={$num['DANBIBID']}");
+    output::trace("Marc record({$num['LENGTH']}): library={$num['BIBLIOTEK']}, id={$num['ID']}, danbibid={$num['DANBIBID']}");
     foreach ($marcclass as $marcItem) {
       $field = $marcItem['field'];
       if ($field != '000') {
-        output::marcDisplay("   $field {$marcItem['indicator']}");
+        output::marcTrace("   $field {$marcItem['indicator']}");
         if (is_array($marcItem['subfield'])) {
           foreach ($marcItem['subfield'] as $subfield) {
             $subfieldCode = $subfield[0];
             $subfield = substr($subfield, 1);
-            output::marcDisplay("     $subfieldCode $subfield");
+            output::marcTrace("     $subfieldCode $subfield");
             if (isset($this->fieldTab[$field][$subfieldCode])) {
               $match[strtolower($this->fieldTab[$field][$subfieldCode])][] = $subfield;
             }
           }
         }
       } else {  // $field IS '000', and there is nothing to find here, However we can display something if verbose enabled
-        output::marcDisplay("   $field {$marcItem['indicator']}");
+        output::marcTrace("   $field {$marcItem['indicator']}");
         if (is_array($marcItem['subfield'])) {
           foreach ($marcItem['subfield'] as $subfield) {
-            output::marcDisplay("     $subfield");
+            output::marcTrace("     $subfield");
           }
         }
       }
@@ -427,24 +490,33 @@ class harvest {
 
   function execute($howmuch) {
     if (empty($howmuch)) {  // $howmuch contains either one of the strings 'full' or 'inc' - or an array of id's
-      output::die_log('No identifiers specified');
+      throw new Exception('No identifiers specified');
     }
     if (is_array($howmuch)) {  // In this case, $howmuch contains an array of id's
-      $this->_processDanbibData("where id in (" . implode(",", $howmuch) . ")");
+      $this->_processDanbibData('where id in (' . implode(',', $howmuch) . ')');
     } else if ($howmuch == 'full') {
-      $this->_processDanbibData("");  // The where clause is empty - meaning all id's will be found
+      $this->_processDanbibData('');  // The where clause is empty - meaning all id's will be found
     } else {  // $howmuch == 'inc'
       $time = 1;
       while (true) {
-        $this->serviceDb->queryServices();
+        try {
+          $this->serviceDb->queryServices();
+        } catch (Exception $e) {
+          throw new Exception('Service database could not be queried');
+        }
         while ($id = $this->serviceDb->fetchId()) {
           $time = 1;
-          $this->_processDanbibData("where id = $id");
-          if (!$this->noupdate) {  // Only remove entry from service table if update is done
-            $this->serviceDb->removeService($id);
+          try {
+            $this->_processDanbibData("where id = $id");
+            if (!$this->noupdate) {  // Only remove entry from service table if update is done
+              $this->serviceDb->removeService($id);
+            }
+          } catch (Exception $e) {
+            output::error('Error while processing Danbib data - ' . $e->getMessage());
           }
         }
-        output::display("Delaying: $time seconds");
+        if (!$this->loop) break;
+        output::trace("Delaying: $time seconds");
         sleep($time);
         $time = min(2*$time, 60*VOXB_HARVEST_POLL_TIME);  // Double the time value (with a ceiling value)
       }
