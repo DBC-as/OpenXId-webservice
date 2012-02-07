@@ -49,6 +49,9 @@ edit literals:
   * OCI_LOGON=user/pass@server.dk/server.dk
   * SERVICE_LOGON=user/pass@server.dk/server.dk
   * OPENXID_URL=http://openxid.addi.dk/x.y
+... where OCI_LOGON is login information for the Danbib Database, SERVICE_LOGON
+is the login information for the database, holding the Service table and
+OPENXID_URL is the URL for the OpenXid Webservice
 
 call: make
   * make test all ”php” modules for syntax errors and makes a copy of the different “INSTALL” files.
