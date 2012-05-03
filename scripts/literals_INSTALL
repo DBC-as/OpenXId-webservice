@@ -22,3 +22,6 @@ SERVICE_LOGON=user/pass@server.dk/server.dk
 
 # OPENXID_URL contains the URL for the OpenXid Webservice, where the harvested data is directed to
 OPENXID_URL=http://openxid.addi.dk/x.y
+
+# OPENXID_LOG contains a path for the logfile, created by the harvester
+OPENXID_LOG=/dev/null
