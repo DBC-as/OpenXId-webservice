@@ -1,6 +1,6 @@
 [setup]
 
-version = 0.1
+version = 0.2
 
 ; Login credentials 
 ocilogon = ...
@@ -28,39 +28,39 @@ verbose = WARNING+ERROR+FATAL+STAT+TIMER+TRACE+DEBUG+Z3950+OCI
 [marc]
 
 ; identifier of bibliographic record
-field[recordid][] = 001*a
+field["recordid"][] = 001*a
 
 ; used for generating localid ([librayid][recordid]) if 001*a is not faust
-field[libraryid][] = 001*b
+field["libraryid"][] = 001*b
 
 ; if FAUST, 001*a is faust, isbn, ean otherwise 001*a is local
-field[recordidtype][] = 001*t
+field["recordidtype"][] = 001*t
 
 ; previous faust
-field[previousfaustid][] = 002*a
+field["previousfaustid"][] = 002*a
 
 ; used for generating previous localid ([librayid]:[recordid]) with 002*c/d
-field[previouslibraryid][] = 002*b
+field["previouslibraryid"][] = 002*b
 
 ; previous identifier of bibliographic record
-field[previousrecordid][] = 002*c
-field[previousrecordid][] = 002*d
+field["previousrecordid"][] = 002*c
+field["previousrecordid"][] = 002*d
 
 ; ISBN-10
-field[ean][] = 021*a
+field["ean"][] = 021*a
 
 ; ISBN-13
-field[ean][] = 021*e
+field["ean"][] = 021*e
 
 ; ISSN
-field[issn][] = 022*a
+field["issn"][] = 022*a
 
 ; barcode from manufacturer, often EAN
-field[materialid][] = 023*a
+field["materialid"][] = 023*a
 
 ; identifier of music recordings, can be EAN
-field[materialid][] = 260*n
+field["materialid"][] = 260*n
 
 ; identifier of music recordings, can be EAN
-field[materialid][] = 538*g
+field["materialid"][] = 538*g
 
