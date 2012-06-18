@@ -13,17 +13,17 @@ wsdl = openxid.wsdl
 ;show_samples = 1
 
 ; validate
-validate[soap_request] = soap.xsd
-validate[request] = openxid.xsd
-;validate[response] = openxid.xsd
+validate['soap_request'] = soap.xsd
+validate['request'] = openxid.xsd
+;validate['response'] = openxid.xsd
 
 ; soapActions and their corresponding request structure
 ; Can be found in the wsdl but is stated here for convenience
-soapAction[getIdsRequest] = getIdsRequest
-soapAction[updateIdRequest] = updateIdRequest
+soapAction['getIdsRequest'] = getIdsRequest
+soapAction['updateIdRequest'] = updateIdRequest
 
 ; prefixes and namespaces
-xmlns[xid] = http://oss.dbc.dk/ns/openxid
+xmlns['xid'] = http://oss.dbc.dk/ns/openxid
 
 ; path to xml-examples
 xmldir = ./xml
@@ -71,18 +71,18 @@ verbose = WARNING+ERROR+FATAL+STAT+TIMER+TRACE+DEBUG+Z3950
 ; aaa_ip_rights[group-identifier][ressource][<named ressource>] = right to <named ressource>
 ; aaa_ip_rights[group-identifier][ressource][<named ressource 2>] = right to <named ressource 2>
 ;
-aaa_ip_rights[dbc][ip_list] = 172.16.0.0-172.31.255.255;193.111.162.0-193.111.162.255
-aaa_ip_rights[dbc][ressource][openxidupdate] = 500
-aaa_ip_rights[users][ip_list] = 172.16.0.0-172.31.255.255;193.111.162.0-193.111.162.255
-aaa_ip_rights[users][ressource][openxidget] = 560
+aaa_ip_rights['dbc']['ip_list'] = 172.16.0.0-172.31.255.255;193.111.162.0-193.111.162.255
+aaa_ip_rights['dbc']['ressource']['openxidupdate'] = 500
+aaa_ip_rights['users']['ip_list'] = 172.16.0.0-172.31.255.255;193.111.162.0-193.111.162.255
+aaa_ip_rights['users']['ressource']['openxidget'] = 560
 
 
 [rest]
 ; REST parameters for SOAPactions
 ;
 ; use xml.path.to.par notation to solve name-conflicts
-; action[thisSoapAction][foo][] = some.number
-; action[thisSoapAction][bar][] = another.number
+; action'thisSoapAction']['foo'][] = some.number
+; action['thisSoapAction']['bar'][] = another.number
 ; to build
 ; <thisSoapAction>
 ;   <foo>
@@ -95,20 +95,20 @@ aaa_ip_rights[users][ressource][openxidget] = 560
 ; from url: action=thisSoapAction&some.number=nn&another.number=mm
 ;
 
-action[ALL][] = outputType
-action[ALL][] = callback
+action['ALL'][] = outputType
+action['ALL'][] = callback
 
-action[getIdsRequest][id][] = idType
-action[getIdsRequest][id][] = id.idType
-action[getIdsRequest][id][] = idValue
-action[getIdsRequest][id][] = id.idValue
+action['getIdsRequest']['id'][] = idType
+action['getIdsRequest']['id'][] = id.idType
+action['getIdsRequest']['id'][] = idValue
+action['getIdsRequest']['id'][] = id.idValue
 
-action[updateIdRequest][] = recordId
-action[updateIdRequest][] = clusterId
-action[updateIdRequest][id][] = idType
-action[updateIdRequest][id][] = id.idType
-action[updateIdRequest][id][] = idValue
-action[updateIdRequest][id][] = id.idValue
+action['updateIdRequest'][] = recordId
+action['updateIdRequest'][] = clusterId
+action['updateIdRequest']['id'][] = idType
+action['updateIdRequest']['id'][] = id.idType
+action['updateIdRequest']['id'][] = idValue
+action['updateIdRequest']['id'][] = id.idValue
 
 
 [howru]

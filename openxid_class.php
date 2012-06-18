@@ -28,6 +28,7 @@ require_once("OLS_class_lib/material_id_class.php");
 class openXId extends webServiceServer {
 
   protected $db;
+  private $idTypeTable;
 
   function __construct($inifile) {
     parent::__construct($inifile);
@@ -37,6 +38,13 @@ class openXId extends webServiceServer {
     } catch(Exception $e) {
       verbose::log(ERROR, "openxid:: Couldn't open database: " . $e->__toString());
       unset($this->db);
+    }
+    // get conversion table between binary idType id's and textual idTypes
+    if (isset($this->db)) {
+      if (is_string($this->idTypeTable = $this->_getIdTypeTable())) {
+        verbose::log(ERROR, "openxid:: Couldn't open database: " . $this->idTypeTable);
+        unset($this->db);
+      }
     }
     verbose::log(TRACE, "openxid:: openxid initialized");
   }
@@ -124,7 +132,7 @@ class openXId extends webServiceServer {
       }
     } catch(Exception $e) {
       verbose::log(ERROR, "openxid:: Couldn't get ID type table: " . $e->__toString());
-      return "could not reach database";
+      return "could not read ID Types";
     }
     return $result;
   }
@@ -213,14 +221,6 @@ class openXId extends webServiceServer {
     }
 
     if (!isset($this->db)) {
-      $xid_error = &$xid_getIdsResponse->_value->error;
-      $xid_error->_value = "could not reach database";
-      $xid_error->_namespace = $this->xmlns['xid'];
-      return $ret;
-    }
-
-    // get conversion table between binary idType id's and textual idTypes
-    if (is_string($this->idTypeTable = $this->_getIdTypeTable())) {
       $xid_error = &$xid_getIdsResponse->_value->error;
       $xid_error->_value = "could not reach database";
       $xid_error->_namespace = $this->xmlns['xid'];
@@ -326,18 +326,11 @@ class openXId extends webServiceServer {
       return $ret;
     }
 
-    // get conversion table between binary idType id's and textual idTypes
-    if (is_string($this->idTypeTable = $this->_getIdTypeTable())) {
-      $xid_error = &$xid_updateIdResponse->_value->error;
-      $xid_error->_value = "could not reach database";
-      $xid_error->_namespace = $this->xmlns['xid'];
-      return $ret;
-    }
-
     $recordId = strip_tags($param->recordId->_value);
     $clusterId = strip_tags($param->clusterId->_value);
     if (isset($param->id)) {
       if (!is_array($param->id)) $param->id = array($param->id);  // Assure, that this is an array
+      $id = array();
       foreach ($param->id as $item) {
         $idType = strip_tags($item->_value->idType->_value);
         $idValue = strip_tags($item->_value->idValue->_value);
