@@ -7,6 +7,7 @@ OCILOGON=$(subst /,\/,$(OCI_LOGON))
 SRVLOGON=$(subst /,\/,$(SERVICE_LOGON))
 OPENXID=$(subst /,\/,$(OPENXID_URL))
 LOGFILE=$(subst /,\/,$(OPENXID_LOG))
+OPENXIDPATH=$(subst /,\/,$(OPENXID_PATH))
 
 # ============================================================================
 #			Commands
@@ -40,6 +41,7 @@ install:
 	sed -i 's/^;*servicelogon[ ]*=[ ]*.*/servicelogon = $(SRVLOGON)/' harvest.ini
 	sed -i 's/^;*openxidurl[ ]*=[ ]*.*/openxidurl = $(OPENXID)/' harvest.ini
 	sed -i 's/^;*logfile[ ]*=[ ]*.*/logfile = $(LOGFILE)/' harvest.ini
+	sed -i 's/^;*openxidpath[ ]*=[ ]*.*/openxidpath = $(OPENXIDPATH)/' harvest.ini
 	chmod -w harvest.ini
 	chmod +x harvest
 

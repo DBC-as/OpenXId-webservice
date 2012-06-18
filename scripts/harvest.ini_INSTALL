@@ -12,6 +12,9 @@ openxidurl = ...
 ; logfile for verbose output
 logfile = ...
 
+; Path to the OpenXid classes
+openxidpath = ...
+
 ; set verboselevel
 ;   WARNING - simple warnings
 ;   ERROR   - errors in response

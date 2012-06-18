@@ -25,3 +25,6 @@ OPENXID_URL=http://openxid.addi.dk/x.y
 
 # OPENXID_LOG contains a path for the logfile, created by the harvester
 OPENXID_LOG=/dev/null
+
+# OPENXID_PATH contains a path for the OpenXid webservice classes
+OPENXID_PATH=..

@@ -26,14 +26,16 @@ require_once("$startdir/OLS_class_lib/pg_database_class.php");
 
 require_once("$startdir/OLS_class_lib/material_id_class.php");
 require_once("$startdir/OLS_class_lib/curl_class.php");
+require_once("$startdir/OLS_class_lib/timer_class.php");
 
 define('VOXB_SERVICE_NUMBER', 7);               // Service number for the Voxb Service
 define('VOXB_HARVEST_POLL_TIME', 5);            // Time given in minutes
 define('PROGRESS_INDICATOR_LINE_LENGTH', 100);  // Number of periods in a progression indicator line
 define('PROGRESS_INDICATOR_CHUNK', 100);        // Size of chunks to process for each period to be echoed
-
+define('TIME_MEASUREMENT', true);               // Determines whether time will be measured and logged
 
 //==============================================================================
+
 
 class output {
   static $enabled;  // Echo enable flag
@@ -83,6 +85,35 @@ class output {
     exit;
   }
 }
+
+//==============================================================================
+
+class stopWatchTimer {
+  static $stop_watch_timer;
+  
+  static function init() {
+    self::$stop_watch_timer = new stopwatch();
+  }
+
+  static function start() {
+    if (!isset(self::$stop_watch_timer)) return;
+    $backtrace = debug_backtrace();
+    self::$stop_watch_timer->start($backtrace[1]['class'] . '::' . $backtrace[1]['function']);
+  }
+  
+  static function stop() {
+    if (!isset(self::$stop_watch_timer)) return;
+    $backtrace = debug_backtrace();
+    self::$stop_watch_timer->stop($backtrace[1]['class'] . '::' . $backtrace[1]['function']);
+  }
+  
+  static function result() {
+    self::$stop_watch_timer->format('screen');
+    output::enable(true);  // This is the very last to happen, so we don't care now about whether output was enabled
+    output::trace(self::$stop_watch_timer->dump());
+  }
+}
+
 
 //==============================================================================
 
@@ -137,32 +168,42 @@ class serviceDatabase {
   }
 
   function queryServices() {
+    stopWatchTimer::start();
     try {
       $this->oci->set_query('select id from services where service = ' . VOXB_SERVICE_NUMBER);
     } catch (ociException $e) {
       output::error($e->getMessage());
+      stopWatchTimer::stop();
       throw new Exception('Service Database could not be queried');
     }
+    stopWatchTimer::stop();
   }
 
   function fetchId() {
+    stopWatchTimer::start();
     try {
       $ret = $this->oci->fetch_into_assoc();
+      stopWatchTimer::stop();
       return $ret['ID'];
     } catch (ociException $e) {
       output::error($e->getMessage());
+      stopWatchTimer::stop();
       throw new Exception('Could not fetch ID from Service Database');
     }
+    stopWatchTimer::stop();
   }
 
   function removeService($idno) {
+    stopWatchTimer::start();
     try {
       $this->ociDelete->set_query("delete from services where service = " . VOXB_SERVICE_NUMBER . " and id = $idno");
       $this->ociDelete->commit();
     } catch (ociException $e) {
       output::error($e->getMessage());
+      stopWatchTimer::stop();
       throw new Exception('Could not remove ID from Service Database: ' . $idno);
     }
+    stopWatchTimer::stop();
   }
 }
 
@@ -204,6 +245,7 @@ class danbibDatabase {
   }
 
   function query($where) {
+    stopWatchTimer::start();
     try {
       $sql = "select id, danbibid, bibliotek, data, length(data) length from poster";
       if (!empty($where)) {
@@ -212,11 +254,14 @@ class danbibDatabase {
       $this->oci->set_query($sql);
     } catch (ociException $e) {
       output::error($e->getMessage());
+      stopWatchTimer::stop();
       throw new Exception('Danbib Database could not be queried');
     }
+    stopWatchTimer::stop();
   }
 
   function fetch() {
+    stopWatchTimer::start();
     try {
       $data = $this->oci->fetch_into_assoc();
       if ($data['LENGTH'] >= 4000) {
@@ -228,11 +273,14 @@ class danbibDatabase {
           $tjek = strlen($data['DATA']);
         } while ($overflow['LENGTH'] >= 4000);
       }
+      stopWatchTimer::stop();
       return $data;
     } catch (ociException $e) {
       output::error($e->getMessage());
+      stopWatchTimer::stop();
       throw new Exception('Could not fetch data from Danbib Database');
     }
+    stopWatchTimer::stop();
   }
 }
 
@@ -241,7 +289,7 @@ class danbibDatabase {
 class guessId {
   function guess($par) {
     // First, determine either Faust of Local id number from Identifier of Bibliographic Record
-    $recordidtype = strtolower($par['recordidtype'][0]);  // Only one instance of this par is expected, therefore the first is taken
+//    $recordidtype = strtolower($par['recordidtype'][0]);  // Only one instance of this par is expected, therefore the first is taken
     $recordid = $par['recordid'][0];  // Only one instance of this par is expected, therefore the first is taken
     $libraryid = $par['libraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
     
@@ -267,9 +315,9 @@ class guessId {
     $ret[] = array('type' => $rtype, 'id' => $recordid);
     output::trace(" Found identification: $rtype($recordid) - Reason: Trial validations says, that $recordid is of type: '$rtype'");
     // Now, determine if one of the "previous" faust/local numbers exist
-    $previousfaustid = $par['previousfaustid'][0];  // Only one instance of this par is expected, therefore the first is taken
-    $previouslibraryid = $par['previouslibraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
-    $previousrecordid = $par['previousrecordid'];  // Please note, that here we can have multiple (well - two) previous record id's - so this is an array
+    @ $previousfaustid = $par['previousfaustid'][0];  // Only one instance of this par is expected, therefore the first is taken
+    @ $previouslibraryid = $par['previouslibraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
+    @ $previousrecordid = $par['previousrecordid'];  // Please note, that here we can have multiple (well - two) previous record id's - so this is an array
     if (!empty($previousfaustid)) {  // If previousfaustid exists, then it can either be a faust number or a local number
       $validfaust = materialId::validateFaust(materialId::normalizeFaust($previousfaustid));
       if ($validfaust and ($previousfaustid[0] != '9')) {  // If previousfaustid is a valid faust, AND the first digit is NOT '9' - then we know that this is a faust number
@@ -333,8 +381,12 @@ class guessId {
 
 class openXidWrapper {
   static $enabled;
-
-  private function __construct() {}
+  static $openxid_class;  // If not empty the wrapper uses direct database access - by using the class in this variable
+  static $openxid_url;    // If not empty the wrapper uses the OpenXid webservice - by using the URL in this variable
+  
+  private function __construct($webservice) {
+    self::$webservice = $webservice;
+  }
 
   private static function _curl_execute($url, $xml) {
     $curl = new cURL();
@@ -343,7 +395,7 @@ class openXidWrapper {
     $res = $curl->get($url);
     if ($err = $curl->has_error()) throw new Exception('cURL could not communicate with OpenXid: ' . $err);
     $curl->close();
-    $res_php = unserialize($res);
+    @ $res_php = unserialize($res);
     if (!is_object($res_php)) throw new Exception('cURL could not decode status from OpenXid');
     return $res_php;
   }
@@ -371,17 +423,25 @@ class openXidWrapper {
     self::$enabled = $flag;
   }
 
-  function sendupdateIdRequest($url, $openxid, $clusterid, $matches) {
-    if (!self::$enabled) return;
-    if (!is_array($matches));
-    foreach ($matches as $m) $all_ids[] = "{$m['type']}({$m['id']})";
+  function openxidUrl($url) {
+    self::$openxid_url = $url;
+  }
+  
+  function openxidClass($class) {
+    self::$openxid_class = $class;
+  }
+  
+  function sendupdateIdRequestWeb($openxid, $clusterid, $matches) {
+    if (is_array($matches)) {
+      foreach ($matches as $m) $all_ids[] = "{$m['type']}({$m['id']})";
+    }
     try {
-      $response = self::_curl_execute($url, self::_buildRequest($openxid, $clusterid, $matches));
+      $response = self::_curl_execute(self::$openxid_url, self::_buildRequest($openxid, $clusterid, $matches));
     } catch (Exception $e) {
       output::error($e->getMessage());
       throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $all_ids));
     }
-    if (!is_array($response->updateIdResponse->_value->updateIdStatus) ) {
+    if (!isset($response->updateIdResponse->_value->updateIdStatus) or !is_array($response->updateIdResponse->_value->updateIdStatus)) {
       output::error('Could not decode answer from OpenXid');
       throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $all_ids));
     }
@@ -396,7 +456,45 @@ class openXidWrapper {
       throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $faulty_ids));
     }
   }
+  
+  function sendupdateIdRequestDirect($openxid, $clusterid, $matches) {
+    // Setup aaa authentication for allowing access to direct call
+    self::$openxid_class->initOpenXid();
+    // Build php object for representing the XML request
+    unset($updateRequest);
+    $updateRequest->recordId->_value = $openxid;
+    $updateRequest->clusterId->_value = $clusterid;
+    foreach ($matches as $m) {
+      $item->idType->_value = $m['type'];
+      $item->idValue->_value = $m['id'];
+      $updateRequest->id[]->_value = $item;
+      unset($item);
+    }
+    // 'Send' the request to the OpenXId object
+    $response = self::$openxid_class->updateIdRequest($updateRequest);
 
+    $statuses = $response->updateIdResponse->_value->updateIdStatus;
+    $faulty_ids = array();
+    if (is_array($statuses)) foreach ($statuses as $s) {
+      if (isset($s->_value->error)) {
+        $faulty_ids[] = "{$s->_value->id->_value->idType->_value}({$s->_value->id->_value->idValue->_value})[{$s->_value->error->_value}]";
+      }
+    }
+    if (count($faulty_ids) > 0) {
+      throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $faulty_ids));
+    }
+  }
+
+  function sendupdateIdRequest($openxid, $clusterid, $matches) {
+    if (!self::$enabled) return;
+    stopWatchTimer::start();
+    if (isset(self::$openxid_class)) {
+      self::sendupdateIdRequestDirect($openxid, $clusterid, $matches);
+    } elseif (isset(self::$openxid_url)) {
+      self::sendupdateIdRequestWeb($openxid, $clusterid, $matches);
+    }
+    stopWatchTimer::stop();
+  }
 }
 
 
@@ -406,18 +504,37 @@ class openXidWrapper {
 class harvest {
   private $progress;    // Progress indicator
   private $loop;        // Loop mode or not
+  private $webservice;  // Boolean to tell, if webservice call shall be used to send data to OpenXid
   private $fieldTab;    // Holds translation table for fields/subfields
   private $danbibDb;    // Object holding danbib database
   private $serviceDb;   // Object holding service database
-  private $openxidurl;  // URL to the Open Xid Webservice
   private $noupdate;    // Boolean to tell, whether to send data to OpenXId - if false, no data is sent
-
-  function __construct($config, $verbose, $loop) {
+  private $timing;      // Boolean to tell, whether timing figures are to be displayed at the end
+  
+  function __construct($config, $verbose, $loop, $webservice) {
+    if (isset($_SERVER['REMOTE_ADDR'])) {
+      $server_ip = $_SERVER['REMOTE_ADDR'];
+    } else {
+      $server_ip = gethostbyname(gethostname());
+    }
     $this->loop = $loop;
+    $this->webservice = $webservice;
+    if ($this->webservice) {
+      openXidWrapper::openxidUrl($config->get_value('openxidurl', 'setup'));
+    } else {
+      require_once($config->get_value('openxidpath', 'setup') . '/openxid_class.php');  // Include the Openxid classes
+      // Now define a subclass of OpenXId - cannot be done before runtime, because placement of parent openXId class is not known before now
+      eval("class directOpenXId extends openXId { function initOpenXid() { \$this->aaa->init_rights(null, null, null, '$server_ip'); } }");
+      openXidWrapper::openxidClass(new directOpenXId($config->get_value('openxidpath', 'setup') . '/openxid.ini'));
+    }
     $this->progress = new progressIndicator(!(array_key_exists('marc', $verbose) or array_key_exists('verbose', $verbose)));
     output::enable(array_key_exists('verbose', $verbose));
     output::marcEnable(array_key_exists('marc', $verbose) and array_key_exists('verbose', $verbose));
     $this->noupdate = array_key_exists('noupdate', $verbose);
+    $this->timing = array_key_exists('timing', $verbose);
+    if ($this->timing) {
+      stopWatchTimer::init();
+    }
     openXidWrapper::enable(!$this->noupdate);
     output::open($config->get_value("logfile", "setup"), $config->get_value("verbose", "setup"));
     // Construct the fieldTab table - translating field/subfield to identifier types
@@ -437,19 +554,18 @@ class harvest {
       output::error($e->getMessage());
       throw new Exception('A database error prevented the harvest');
     }
-    try {
-      $this->openxidurl = $config->get_value('openxidurl', 'setup');
-    } catch (Exception $e) {
-      output::error($e->getMessage());
-      throw new Exception('An error in the communication to OpenXid prevented the harvest');
+  }
+
+  function __destruct() {
+    if ($this->timing) {
+      stopWatchTimer::result();
     }
   }
 
-
-  private function _processMarcRecord($num) {
+  private function _processMarcRecord($rec) {
     $marcclass = new marc();
-    $marcclass->fromIso($num['DATA']);
-    output::trace("Marc record({$num['LENGTH']}): library={$num['BIBLIOTEK']}, id={$num['ID']}, danbibid={$num['DANBIBID']}");
+    $marcclass->fromIso($rec['DATA']);
+    output::trace("Marc record({$rec['LENGTH']}): library={$rec['BIBLIOTEK']}, id={$rec['ID']}, danbibid={$rec['DANBIBID']}");
     foreach ($marcclass as $marcItem) {
       $field = $marcItem['field'];
       if ($field != '000') {
@@ -473,7 +589,7 @@ class harvest {
         }
       }
     }
-    openXidWrapper::sendupdateIdRequest($this->openxidurl, $num['ID'], $num['DANBIBID'], guessId::guess($match));
+    openXidWrapper::sendupdateIdRequest($rec['ID'], $rec['DANBIBID'], guessId::guess($match));
     unset($marcclass);
     unset($match);
   }
@@ -481,15 +597,17 @@ class harvest {
 
   private function _processDanbibData($where) {
     $this->danbibDb->query($where);
-    while ($num = $this->danbibDb->fetch()) {
+    while ($rec = $this->danbibDb->fetch()) {
       $this->progress->tick();
-      $this->_processMarcRecord($num);
+      $this->_processMarcRecord($rec);
     }
   }
 
 
   function execute($howmuch) {
+    stopWatchTimer::start();
     if (empty($howmuch)) {  // $howmuch contains either one of the strings 'full' or 'inc' - or an array of id's
+      stopWatchTimer::stop();
       throw new Exception('No identifiers specified');
     }
     if (is_array($howmuch)) {  // In this case, $howmuch contains an array of id's
@@ -498,10 +616,12 @@ class harvest {
       $this->_processDanbibData('');  // The where clause is empty - meaning all id's will be found
     } else {  // $howmuch == 'inc'
       $time = 1;
+            
       while (true) {
         try {
           $this->serviceDb->queryServices();
         } catch (Exception $e) {
+          stopWatchTimer::stop();
           throw new Exception('Service database could not be queried');
         }
         while ($id = $this->serviceDb->fetchId()) {
@@ -514,13 +634,15 @@ class harvest {
           } catch (Exception $e) {
             output::error('Error while processing Danbib data - ' . $e->getMessage());
           }
-        }
+        }        
         if (!$this->loop) break;
+
         output::trace("Delaying: $time seconds");
         sleep($time);
         $time = min(2*$time, 60*VOXB_HARVEST_POLL_TIME);  // Double the time value (with a ceiling value)
       }
     }
+    stopWatchTimer::stop();
   }
 
 }
