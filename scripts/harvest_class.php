@@ -432,29 +432,13 @@ class openXidWrapper {
   }
   
   function sendupdateIdRequestWeb($openxid, $clusterid, $matches) {
-    if (is_array($matches)) {
-      foreach ($matches as $m) $all_ids[] = "{$m['type']}({$m['id']})";
-    }
     try {
       $response = self::_curl_execute(self::$openxid_url, self::_buildRequest($openxid, $clusterid, $matches));
     } catch (Exception $e) {
       output::error($e->getMessage());
       throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $all_ids));
     }
-    if (!isset($response->updateIdResponse->_value->updateIdStatus) or !is_array($response->updateIdResponse->_value->updateIdStatus)) {
-      output::error('Could not decode answer from OpenXid');
-      throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $all_ids));
-    }
-    $statuses = $response->updateIdResponse->_value->updateIdStatus;
-    $faulty_ids = array();
-    foreach ($statuses as $s) {
-      if (isset($s->_value->error)) {
-        $faulty_ids[] = "{$s->_value->id->_value->idType->_value}({$s->_value->id->_value->idValue->_value})[{$s->_value->error->_value}]";
-      }
-    }
-    if (count($faulty_ids) > 0) {
-      throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $faulty_ids));
-    }
+    return $response;
   }
   
   function sendupdateIdRequestDirect($openxid, $clusterid, $matches) {
@@ -471,8 +455,23 @@ class openXidWrapper {
       unset($item);
     }
     // 'Send' the request to the OpenXId object
-    $response = self::$openxid_class->updateIdRequest($updateRequest);
+    return self::$openxid_class->updateIdRequest($updateRequest);
+  }
 
+  function sendupdateIdRequest($openxid, $clusterid, $matches) {
+    if (!self::$enabled) return;
+    stopWatchTimer::start();
+    $all_ids = array();
+    if (is_array($matches)) foreach ($matches as $m) $all_ids[] = "{$m['type']}({$m['id']})";
+    if (isset(self::$openxid_class)) {
+      $response = self::sendupdateIdRequestDirect($openxid, $clusterid, $matches);
+    } elseif (isset(self::$openxid_url)) {
+      $response = self::sendupdateIdRequestWeb($openxid, $clusterid, $matches);
+    }
+    if (!isset($response->updateIdResponse->_value->updateIdStatus) or !is_array($response->updateIdResponse->_value->updateIdStatus)) {
+      output::error('Could not decode answer from OpenXid');
+      throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $all_ids));
+    }
     $statuses = $response->updateIdResponse->_value->updateIdStatus;
     $faulty_ids = array();
     if (is_array($statuses)) foreach ($statuses as $s) {
@@ -481,17 +480,7 @@ class openXidWrapper {
       }
     }
     if (count($faulty_ids) > 0) {
-      throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $faulty_ids));
-    }
-  }
-
-  function sendupdateIdRequest($openxid, $clusterid, $matches) {
-    if (!self::$enabled) return;
-    stopWatchTimer::start();
-    if (isset(self::$openxid_class)) {
-      self::sendupdateIdRequestDirect($openxid, $clusterid, $matches);
-    } elseif (isset(self::$openxid_url)) {
-      self::sendupdateIdRequestWeb($openxid, $clusterid, $matches);
+      output::error('Warning: Could not send data to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $faulty_ids));
     }
     stopWatchTimer::stop();
   }

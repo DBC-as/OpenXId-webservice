@@ -29,9 +29,11 @@ define('IS_HOMIE', true);
 
 // For debugging: Allows the script to be run from a standard browser - put arguments in GET variable: "argv"
 if (defined('IS_HOMIE') and isset($_REQUEST['argv'])) {
-  $argv = array($_SERVER['SCRIPT_FILENAME']);
+  $argv = array($_SERVER['SCRIPT_FILENAME']);  // First element is the filename itself
+  foreach (explode(' ', trim($_REQUEST['argv'], " \t\n\r\0\x0B\"'")) as $arg) {
+    $argv[] = $arg;
+  }
   $argc = count($argv);
-  foreach (explode(' ', trim($_REQUEST['argv'], ' \t\n\r\0\x0B"\'')) as $arg) $argv[] = $arg;
   echo "<pre><code>\n";
 }
 
