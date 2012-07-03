@@ -336,12 +336,12 @@ class openXId extends webServiceServer {
         $idValue = strip_tags($item->_value->idValue->_value);
         $normalizedValue = self::_normalize($idType, $idValue);
         if (!is_string($idType) or !array_key_exists($idType, $this->idTypeTable)) {  // Error: Invalid idType
-          $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue, 'error' => 'invalid idType');  // Use type:value in order to filter out duplicates
+          $id["$idType:$normalizedValue"] = array('idType' => $idType, 'idValue' => $idValue, 'error' => 'invalid idType');  // Use type:value in order to filter out duplicates
         } else {
           if (empty($normalizedValue)) {  // If normalizing returns a zero, it means that the id was invalid
-            $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $idValue, 'error' => 'invalid id');  // Use type:value in order to filter out duplicates
+            $id["$idType:$normalizedValue"] = array('idType' => $idType, 'idValue' => $idValue, 'error' => 'invalid id');  // Use type:value in order to filter out duplicates
           } else {
-            $id["$idType:$idValue"] = array('idType' => $idType, 'idValue' => $normalizedValue);  // Use type:value in order to filter out duplicates
+            $id["$idType:$normalizedValue"] = array('idType' => $idType, 'idValue' => $normalizedValue);  // Use type:value in order to filter out duplicates
           }
         }
       }
