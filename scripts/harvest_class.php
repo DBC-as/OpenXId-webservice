@@ -170,7 +170,7 @@ class serviceDatabase {
   function queryServices() {
     stopWatchTimer::start();
     try {
-      $this->oci->set_query('select id from services where service = ' . VOXB_SERVICE_NUMBER);
+      $this->oci->set_query('select rowid, id from services where service = ' . VOXB_SERVICE_NUMBER);
     } catch (ociException $e) {
       output::error($e->getMessage());
       stopWatchTimer::stop();
@@ -184,7 +184,7 @@ class serviceDatabase {
     try {
       $ret = $this->oci->fetch_into_assoc();
       stopWatchTimer::stop();
-      return $ret['ID'];
+      return $ret;
     } catch (ociException $e) {
       output::error($e->getMessage());
       stopWatchTimer::stop();
@@ -193,10 +193,10 @@ class serviceDatabase {
     stopWatchTimer::stop();
   }
 
-  function removeService($idno) {
+  function removeService($rowid) {
     stopWatchTimer::start();
     try {
-      $this->ociDelete->set_query("delete from services where service = " . VOXB_SERVICE_NUMBER . " and id = $idno");
+      $this->ociDelete->set_query("delete from services where service = " . VOXB_SERVICE_NUMBER . " and rowid = chartorowid('$rowid')");
       $this->ociDelete->commit();
     } catch (ociException $e) {
       output::error($e->getMessage());
@@ -627,12 +627,12 @@ class harvest {
           stopWatchTimer::stop();
           throw new Exception('Service database could not be queried');
         }
-        while ($id = $this->serviceDb->fetchId()) {
+        while ($ids = $this->serviceDb->fetchId()) {
           $time = 1;
           try {
-            $this->_processDanbibData("where id = $id");
+            $this->_processDanbibData("where id = " . $ids['ID']);
             if (!$this->noupdate) {  // Only remove entry from service table if update is done
-              $this->serviceDb->removeService($id);
+              $this->serviceDb->removeService($ids['ROWID']);
             }
           } catch (Exception $e) {
             output::error('Error while processing Danbib data - ' . $e->getMessage());
