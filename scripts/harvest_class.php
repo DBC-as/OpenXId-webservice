@@ -270,7 +270,6 @@ class danbibDatabase {
           $overflow = $this->_fetchOverflow();
           $data['DATA'] .= $overflow['DATA'];
           $data['LENGTH'] += $overflow['LENGTH'];
-          $tjek = strlen($data['DATA']);
         } while ($overflow['LENGTH'] >= 4000);
       }
       stopWatchTimer::stop();
@@ -289,7 +288,6 @@ class danbibDatabase {
 class guessId {
   function guess($par) {
     // First, determine either Faust of Local id number from Identifier of Bibliographic Record
-//    $recordidtype = strtolower($par['recordidtype'][0]);  // Only one instance of this par is expected, therefore the first is taken
     $recordid = $par['recordid'][0];  // Only one instance of this par is expected, therefore the first is taken
     $libraryid = $par['libraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
     
@@ -314,13 +312,14 @@ class guessId {
     }
     $ret[] = array('type' => $rtype, 'id' => $recordid);
     output::trace(" Found identification: $rtype($recordid) - Reason: Trial validations says, that $recordid is of type: '$rtype'");
+
     // Now, determine if one of the "previous" faust/local numbers exist
     @ $previousfaustid = $par['previousfaustid'][0];  // Only one instance of this par is expected, therefore the first is taken
     @ $previouslibraryid = $par['previouslibraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
     @ $previousrecordid = $par['previousrecordid'];  // Please note, that here we can have multiple (well - two) previous record id's - so this is an array
     if (!empty($previousfaustid)) {  // If previousfaustid exists, then it can either be a faust number or a local number
       $validfaust = materialId::validateFaust(materialId::normalizeFaust($previousfaustid));
-      if ($validfaust and ($previousfaustid[0] != '9')) {  // If previousfaustid is a valid faust, AND the first digit is NOT '9' - then we know that this is a faust number
+      if ($validfaust and ($validfaust[0] != '9')) {  // If previousfaustid is a valid faust, AND the first digit is NOT '9' - then we know that this is a faust number
         $ret[] = array('type' => 'faust', 'id' => $previousfaustid);
         output::trace(" Found identification: faust($previousfaustid) - Reason: [previousfaustid] exists and is a valid faust number and the first digit is not '9'");
       } else if (!empty($previouslibraryid)) {  // Now we know, that this is not a faust number - if previouslibraryid exist, we can form a local number
@@ -332,6 +331,7 @@ class guessId {
         }
       }
     }
+
     // If any of the two previousrecordid's were present, we can form local id's from these, if previouslibraryid exist
     if (is_array($previousrecordid)) {
       foreach ($previousrecordid as $recid) {
@@ -352,14 +352,28 @@ class guessId {
         }
       }
     }
+
     // Run through all parameters, and check for the remaining 'ean', 'issn' and 'materialid'
     if (is_array($par)) foreach ($par as $type => $ids) {
       $type = strtolower($type);
       // If type is either 'ean' or 'issn', then these are used directly
       if (($type == 'ean') or ($type == 'issn')) {
         if (is_array($ids)) foreach ($ids as $id) {
-          $ret[] = array('type' => $type, 'id' => $id);
-          output::trace(" Found identification: $type($id) - Reason: [$type] is found");
+          if ($type == 'ean') {
+            if (materialId::validateEAN(materialId::normalizeEAN($id))) {
+              $ret[] = array('type' => $type, 'id' => $id);
+              output::trace(" Found identification: $type($id) - Reason: [$type] is found");
+            } else {
+              output::error(" Validation error: id=$id is an illegal $type id");
+            }
+          } else {  // $type == 'issn'
+            if (materialId::validateIssn(materialId::normalizeIssn($id))) {
+              $ret[] = array('type' => $type, 'id' => $id);
+              output::trace(" Found identification: $type($id) - Reason: [$type] is found");
+            } else {
+              output::error(" Validation error: id=$id is an illegal $type id");
+            }
+          }
         }
       }
       // If type is materialid, these contains EAN numbers - if they are valid
