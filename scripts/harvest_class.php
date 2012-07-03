@@ -286,6 +286,27 @@ class danbibDatabase {
 //==============================================================================
 
 class guessId {
+  private function _normalize($idType, $idValue) {
+    switch ($idType) {
+      case 'ean':
+        // Check if number is an EAN number
+        $ean = materialId::validateEAN(materialId::normalizeEAN($idValue));
+        if ($ean) return $ean;  // Yes it was...
+        // Check if number is an ISBN number
+        $idValue = materialId::validateISBN(materialId::normalizeISBN($idValue));
+        if ($idValue === 0) return 0;  // No - it was neither a EAN nor an ISBN number
+        return materialId::convertISBNToEAN($idValue);  // It was an ISBN number - convert to EAN
+      case 'issn':
+        return materialId::validateISSN(materialId::normalizeISSN($idValue));
+      case 'faust':
+        return materialId::validateFaust(materialId::normalizeFaust($idValue));
+      case 'local':
+        return $idValue;
+      default:
+        return 0;
+    }
+  }
+
   function guess($par) {
     // First, determine either Faust of Local id number from Identifier of Bibliographic Record
     $recordid = $par['recordid'][0];  // Only one instance of this par is expected, therefore the first is taken
@@ -296,18 +317,15 @@ class guessId {
     
     $rtype = 'local';  // If nothing else is found, then this is a local number
     // First check, if recordid is a faust number
-    if (materialId::validateFaust(materialId::normalizeFaust($recordid))) {
+    if (self::_normalize('faust', $recordid)) {
       if ($recordid[0] != '9') {  // If the first digit is NOT '9' - then we know that this is a faust number
         $rtype = 'faust';
       }
     }
-    if (materialId::validateIsbn(materialId::normalizeIsbn($recordid))) {
-      $rtype = 'ean';  // Please note, that OpenXid does not accept ISBN - only EAN (which is the same)
-    }
-    if (materialId::validateIssn(materialId::normalizeIssn($recordid))) {
+    if (self::_normalize('issn', $recordid)) {
       $rtype = 'issn';
     }
-    if (materialId::validateEan(materialId::normalizeEan($recordid))) {
+    if (self::_normalize('ean', $recordid)) {
       $rtype = 'ean';
     }
     $ret[] = array('type' => $rtype, 'id' => $recordid);
@@ -318,7 +336,7 @@ class guessId {
     @ $previouslibraryid = $par['previouslibraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
     @ $previousrecordid = $par['previousrecordid'];  // Please note, that here we can have multiple (well - two) previous record id's - so this is an array
     if (!empty($previousfaustid)) {  // If previousfaustid exists, then it can either be a faust number or a local number
-      $validfaust = materialId::validateFaust(materialId::normalizeFaust($previousfaustid));
+      $validfaust = self::_normalize('faust', $previousfaustid);
       if ($validfaust and ($validfaust[0] != '9')) {  // If previousfaustid is a valid faust, AND the first digit is NOT '9' - then we know that this is a faust number
         $ret[] = array('type' => 'faust', 'id' => $previousfaustid);
         output::trace(" Found identification: faust($previousfaustid) - Reason: [previousfaustid] exists and is a valid faust number and the first digit is not '9'");
@@ -341,11 +359,11 @@ class guessId {
             output::trace(" Found identification: local($previouslibraryid:$recid) - Reason: [previousrecordid] exists and so does [previouslibraryid]");
           }
           // However - we would also suspect $previousrecordid to contain isbn or issn numbers - if this might be true, then do catch them
-          if (materialId::validateIsbn(materialId::normalizeIsbn($recid))) {
+          if (self::_normalize('ean', $recid)) {
             $ret[] = array('type' => 'ean', 'id' => $recid);
             output::trace(" Found identification: ean($recid) - Reason: [previousrecordid] exists and found to be a local id, but it is also a valid ean number");
           }
-          if (materialId::validateIssn(materialId::normalizeIssn($recid))) {
+          if (self::_normalize('issn', $recid)) {
             $ret[] = array('type' => 'issn', 'id' => $recid);
             output::trace(" Found identification: issn($recid) - Reason: [previousrecordid] exists and found to be a local id, but it is also a valid issn number");
           }
@@ -360,14 +378,14 @@ class guessId {
       if (($type == 'ean') or ($type == 'issn')) {
         if (is_array($ids)) foreach ($ids as $id) {
           if ($type == 'ean') {
-            if (materialId::validateEAN(materialId::normalizeEAN($id))) {
+            if (self::_normalize('ean', $id)) {
               $ret[] = array('type' => $type, 'id' => $id);
               output::trace(" Found identification: $type($id) - Reason: [$type] is found");
             } else {
               output::error(" Validation error: id=$id is an illegal $type id");
             }
           } else {  // $type == 'issn'
-            if (materialId::validateIssn(materialId::normalizeIssn($id))) {
+            if (self::_normalize('issn', $id)) {
               $ret[] = array('type' => $type, 'id' => $id);
               output::trace(" Found identification: $type($id) - Reason: [$type] is found");
             } else {
@@ -379,7 +397,7 @@ class guessId {
       // If type is materialid, these contains EAN numbers - if they are valid
       if (($type == 'materialid')) {
         if (is_array($ids)) foreach ($ids as $id) {
-          if (materialId::validateEAN(materialId::normalizeEAN($id))) {  // If id is a valid EAN number - then just go ahead
+          if (self::_normalize('ean', $id)) {  // If id is a valid EAN number - then just go ahead
             $ret[] = array('type' => 'ean', 'id' => $id);
             output::trace(" Found identification: ean($id) - Reason: [materialid] is found, and is a valid EAN number");
           }
