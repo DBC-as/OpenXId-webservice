@@ -193,10 +193,10 @@ class serviceDatabase {
     stopWatchTimer::stop();
   }
 
-  function removeService($rowid) {
+  function removeService($rowid, $idno) {
     stopWatchTimer::start();
     try {
-      $this->ociDelete->set_query("delete from services where service = " . VOXB_SERVICE_NUMBER . " and rowid = chartorowid('$rowid')");
+      $this->ociDelete->set_query("delete from services where rowid = '$rowid'");
       $this->ociDelete->commit();
     } catch (ociException $e) {
       output::error($e->getMessage());
@@ -650,7 +650,7 @@ class harvest {
           try {
             $this->_processDanbibData("where id = " . $ids['ID']);
             if (!$this->noupdate) {  // Only remove entry from service table if update is done
-              $this->serviceDb->removeService($ids['ROWID']);
+              $this->serviceDb->removeService($ids['ROWID'], $ids['ID']);
             }
           } catch (Exception $e) {
             output::error('Error while processing Danbib data - ' . $e->getMessage());
