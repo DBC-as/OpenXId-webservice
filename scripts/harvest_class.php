@@ -68,8 +68,8 @@ class output {
   function marcTrace($text) {
     if (self::$marcEnabled) {
       echo $text . "\n";
+      self::log(TRACE, $text);
     }
-    self::log(TRACE, $text);
   }
 
   function error($error) {
