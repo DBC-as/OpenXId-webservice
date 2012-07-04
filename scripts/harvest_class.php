@@ -318,7 +318,8 @@ class guessId {
     
     if (empty($recordid)) throw new Exception('An empty RecordId was found - this should not be possible');
     if (empty($libraryid)) throw new Exception('An empty LibraryId was found - this should not be possible');
-    
+
+/*    
     $rtype = 'local';  // If nothing else is found, then this is a local number
     // First check, if recordid is a faust number
     if (self::_normalize('faust', $recordid)) {
@@ -339,7 +340,18 @@ class guessId {
       $ret[] = array('type' => $rtype, 'id' => $recordid);
       output::trace(" Found identification: $rtype($recordid) - Reason: Trial validations says, that $recordid is of type: '$rtype'");
     }
+*/
 
+    // Field 001 contains either a local number or a faust number. 
+    // If 001*b is within the range 870970..870979 - then it is a faust number - otherwise it is a local number
+    if ((870970<=$libraryid) and ($libraryid<=870979)) {  // This is a faust number
+      $ret[] = array('type' => 'faust', 'id' => $recordid);
+      output::trace(" Found identification: faust($recordid) - Reason: [libraryid 001*b=$libraryid] is within the range 870970..870979");
+    } else {  // Now we know that this is a local number
+      $ret[] = array('type' => 'local', 'id' => $libraryid . ':' . $recordid);
+      output::trace(" Found identification: local($libraryid:$recordid) - Reason: [libraryid 001*b=$libraryid] is not within the range 870970..870979");
+    }
+    
     // Now, determine if one of the "previous" faust/local numbers exist
     @ $previousfaustid = $par['previousfaustid'][0];  // Only one instance of this par is expected, therefore the first is taken
     @ $previouslibraryid = $par['previouslibraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
@@ -348,13 +360,13 @@ class guessId {
       $validfaust = self::_normalize('faust', $previousfaustid);
       if ($validfaust and ($validfaust[0] != '9')) {  // If previousfaustid is a valid faust, AND the first digit is NOT '9' - then we know that this is a faust number
         $ret[] = array('type' => 'faust', 'id' => $previousfaustid);
-        output::trace(" Found identification: faust($previousfaustid) - Reason: [previousfaustid] exists and is a valid faust number and the first digit is not '9'");
+        output::trace(" Found identification: faust($previousfaustid) - Reason: [previousfaustid 002*a] exists and is a valid faust number and the first digit is not '9'");
       } else if (!empty($previouslibraryid)) {  // Now we know, that this is not a faust number - if previouslibraryid exist, we can form a local number
         $ret[] = array('type' => 'local', 'id' => $previouslibraryid . ':' . $previousfaustid);
         if ($validfaust) {
-          output::trace(" Found identification: local($previouslibraryid:$previousfaustid) - Reason: [previousfaustid] exists and is a valid faust number, but the first digit is '9'");
+          output::trace(" Found identification: local($previouslibraryid:$previousfaustid) - Reason: [previousfaustid 002*a] exists and is a valid faust number, but the first digit is '9'");
         } else {
-          output::trace(" Found identification: local($previouslibraryid:$previousfaustid) - Reason: [previousfaustid] exists but is not a valid faust number");
+          output::trace(" Found identification: local($previouslibraryid:$previousfaustid) - Reason: [previousfaustid 002*a] exists but is not a valid faust number");
         }
       }
     }
@@ -365,16 +377,16 @@ class guessId {
         if (!empty($recid)) {
           if (!empty($previouslibraryid)) {
             $ret[] = array('type' => 'local', 'id' => $previouslibraryid . ':' . $recid);
-            output::trace(" Found identification: local($previouslibraryid:$recid) - Reason: [previousrecordid] exists and so does [previouslibraryid]");
+            output::trace(" Found identification: local($previouslibraryid:$recid) - Reason: [previousrecordid 002*c 002*d] exists and so does [previouslibraryid 002*b]");
           }
           // However - we would also suspect $previousrecordid to contain isbn or issn numbers - if this might be true, then do catch them
           if (self::_normalize('ean', $recid)) {
             $ret[] = array('type' => 'ean', 'id' => $recid);
-            output::trace(" Found identification: ean($recid) - Reason: [previousrecordid] exists and found to be a local id, but it is also a valid ean number");
+            output::trace(" Found identification: ean($recid) - Reason: [previousrecordid 002*c 002*d] exists and found to be a local id, but it is also a valid ean number");
           }
           if (self::_normalize('issn', $recid)) {
             $ret[] = array('type' => 'issn', 'id' => $recid);
-            output::trace(" Found identification: issn($recid) - Reason: [previousrecordid] exists and found to be a local id, but it is also a valid issn number");
+            output::trace(" Found identification: issn($recid) - Reason: [previousrecordid 002*c 002*d] exists and found to be a local id, but it is also a valid issn number");
           }
         }
       }
@@ -389,14 +401,14 @@ class guessId {
           if ($type == 'ean') {
             if (self::_normalize('ean', $id)) {
               $ret[] = array('type' => $type, 'id' => $id);
-              output::trace(" Found identification: $type($id) - Reason: [$type] is found");
+              output::trace(" Found identification: $type($id) - Reason: [$type 021*a 021*e] is found");
             } else {
               output::error(" Validation error: id=$id is an illegal $type id");
             }
           } else {  // $type == 'issn'
             if (self::_normalize('issn', $id)) {
               $ret[] = array('type' => $type, 'id' => $id);
-              output::trace(" Found identification: $type($id) - Reason: [$type] is found");
+              output::trace(" Found identification: $type($id) - Reason: [$type 022*a] is found");
             } else {
               output::error(" Validation error: id=$id is an illegal $type id");
             }
@@ -408,7 +420,7 @@ class guessId {
         if (is_array($ids)) foreach ($ids as $id) {
           if (self::_normalize('ean', $id)) {  // If id is a valid EAN number - then just go ahead
             $ret[] = array('type' => 'ean', 'id' => $id);
-            output::trace(" Found identification: ean($id) - Reason: [materialid] is found, and is a valid EAN number");
+            output::trace(" Found identification: ean($id) - Reason: [materialid 023*a 260*n 538*g] is found, and is a valid EAN number");
           }
         }
       }
