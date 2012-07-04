@@ -308,6 +308,7 @@ class guessId {
   }
 
   function guess($par) {
+    stopWatchTimer::start();
     // First, determine either Faust of Local id number from Identifier of Bibliographic Record
     $recordid = $par['recordid'][0];  // Only one instance of this par is expected, therefore the first is taken
     $libraryid = $par['libraryid'][0];  // Only one instance of this par is expected, therefore the first is taken
@@ -328,8 +329,13 @@ class guessId {
     if (self::_normalize('ean', $recordid)) {
       $rtype = 'ean';
     }
-    $ret[] = array('type' => $rtype, 'id' => $recordid);
-    output::trace(" Found identification: $rtype($recordid) - Reason: Trial validations says, that $recordid is of type: '$rtype'");
+    if ($rtype == 'local') {
+      $ret[] = array('type' => $rtype, 'id' => $libraryid . ':' . $recordid);
+      output::trace(" Found identification: $rtype($libraryid:$recordid) - Reason: Trial validations says, that $recordid is of type: '$rtype'");
+    } else {
+      $ret[] = array('type' => $rtype, 'id' => $recordid);
+      output::trace(" Found identification: $rtype($recordid) - Reason: Trial validations says, that $recordid is of type: '$rtype'");
+    }
 
     // Now, determine if one of the "previous" faust/local numbers exist
     @ $previousfaustid = $par['previousfaustid'][0];  // Only one instance of this par is expected, therefore the first is taken
@@ -404,6 +410,7 @@ class guessId {
         }
       }
     }
+    stopWatchTimer::stop();
     return $ret;
   }
 }
@@ -584,6 +591,7 @@ class harvest {
   }
 
   private function _processMarcRecord($rec) {
+    stopWatchTimer::start();
     $marcclass = new marc();
     $marcclass->fromIso($rec['DATA']);
     output::trace("Marc record({$rec['LENGTH']}): library={$rec['BIBLIOTEK']}, id={$rec['ID']}, danbibid={$rec['DANBIBID']}");
@@ -610,6 +618,7 @@ class harvest {
         }
       }
     }
+    stopWatchTimer::stop();
     openXidWrapper::sendupdateIdRequest($rec['ID'], $rec['DANBIBID'], guessId::guess($match));
     unset($marcclass);
     unset($match);
