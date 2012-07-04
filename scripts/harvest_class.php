@@ -90,8 +90,10 @@ class output {
 
 class stopWatchTimer {
   static $stop_watch_timer;
-  
-  static function init() {
+  static $enabled;
+
+  static function init($flag=true) {
+    self::$enabled = $flag;
     self::$stop_watch_timer = new stopwatch();
   }
 
@@ -109,8 +111,9 @@ class stopWatchTimer {
   
   static function result() {
     self::$stop_watch_timer->format('screen');
-    output::enable(true);  // This is the very last to happen, so we don't care now about whether output was enabled
-    output::trace(self::$stop_watch_timer->dump());
+    if (self::$enabled) {
+      output::trace(self::$stop_watch_timer->dump());
+    }
   }
 }
 
@@ -584,12 +587,6 @@ class harvest {
     }
   }
 
-  function __destruct() {
-    if ($this->timing) {
-      stopWatchTimer::result();
-    }
-  }
-
   private function _processMarcRecord($rec) {
     stopWatchTimer::start();
     $marcclass = new marc();
@@ -635,23 +632,29 @@ class harvest {
 
 
   function execute($howmuch) {
-    stopWatchTimer::start();
     if (empty($howmuch)) {  // $howmuch contains either one of the strings 'full' or 'inc' - or an array of id's
-      stopWatchTimer::stop();
       throw new Exception('No identifiers specified');
     }
     if (is_array($howmuch)) {  // In this case, $howmuch contains an array of id's
+      stopWatchTimer::start();
       $this->_processDanbibData('where id in (' . implode(',', $howmuch) . ')');
+      stopWatchTimer::stop();
+      stopWatchTimer::result();
     } else if ($howmuch == 'full') {
+      stopWatchTimer::start();
       $this->_processDanbibData('');  // The where clause is empty - meaning all id's will be found
+      stopWatchTimer::stop();
+      stopWatchTimer::result();
     } else {  // $howmuch == 'inc'
       $time = 1;
             
       while (true) {
+        stopWatchTimer::start();
         try {
           $this->serviceDb->queryServices();
         } catch (Exception $e) {
           stopWatchTimer::stop();
+          stopWatchTimer::result();
           throw new Exception('Service database could not be queried');
         }
         while ($ids = $this->serviceDb->fetchId()) {
@@ -665,6 +668,8 @@ class harvest {
             output::error('Error while processing Danbib data - ' . $e->getMessage());
           }
         }        
+        stopWatchTimer::stop();
+        stopWatchTimer::result();
         if (!$this->loop) break;
 
         output::trace("Delaying: $time seconds");
@@ -672,7 +677,6 @@ class harvest {
         $time = min(2*$time, 60*VOXB_HARVEST_POLL_TIME);  // Double the time value (with a ceiling value)
       }
     }
-    stopWatchTimer::stop();
   }
 
 }
