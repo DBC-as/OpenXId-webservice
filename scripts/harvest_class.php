@@ -170,15 +170,6 @@ class serviceDatabase {
     }
   }
 
-  function __destruct() {
-    if (isset($this->oci)) {
-      $this->oci->close();
-    }
-    if (isset($this->ociDelete)) {
-      $this->ociDelete->close();
-    }
-  }
-  
   function queryServices() {
     stopWatchTimer::start();
     try {
@@ -208,7 +199,8 @@ class serviceDatabase {
   function removeService($rowid, $idno) {
     stopWatchTimer::start();
     try {
-      $this->ociDelete->set_query("delete from services where rowid = '$rowid'");
+      $this->ociDelete->bind('id_row', $rowid, -1, OCI_B_ROWID);
+      $this->ociDelete->set_query("delete from services where rowid = :id_row");
       $this->ociDelete->commit();
     } catch (ociException $e) {
       output::error($e->getMessage());
@@ -237,15 +229,6 @@ class danbibDatabase {
     }
   }
 
-  function __destruct() {
-    if (isset($this->oci)) {
-      $this->oci->close();
-    }
-    if (isset($this->ociOverflow)) {
-      $this->ociOverflow->close();
-    }
-  }
-  
   private function _queryOverflow($id) {
     try {
       $sql = "select id, lbnr, data, length(data) length from poster_overflow where id = $id order by lbnr";
@@ -504,16 +487,20 @@ class openXidWrapper {
   }
   
   function sendupdateIdRequestWeb($openxid, $clusterid, $matches) {
+    stopWatchTimer::start();
     try {
       $response = self::_curl_execute(self::$openxid_url, self::_buildRequest($openxid, $clusterid, $matches));
     } catch (Exception $e) {
       output::error($e->getMessage());
+      stopWatchTimer::stop();
       throw new Exception('ID(s) could not be sent to OpenXid - Cluster ID: ' . $clusterid . ', ID\'s=' . implode(', ', $all_ids));
     }
+    stopWatchTimer::stop();
     return $response;
   }
   
   function sendupdateIdRequestDirect($openxid, $clusterid, $matches) {
+    stopWatchTimer::start();
     // Setup aaa authentication for allowing access to direct call
     self::$openxid_class->initOpenXid();
     // Build php object for representing the XML request
@@ -527,7 +514,9 @@ class openXidWrapper {
       unset($item);
     }
     // 'Send' the request to the OpenXId object
-    return self::$openxid_class->updateIdRequest($updateRequest);
+    $ret = self::$openxid_class->updateIdRequest($updateRequest);
+    stopWatchTimer::stop();
+    return $ret;
   }
 
   function sendupdateIdRequest($openxid, $clusterid, $matches) {
