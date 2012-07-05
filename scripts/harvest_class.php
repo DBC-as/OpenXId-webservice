@@ -110,6 +110,7 @@ class stopWatchTimer {
   }
   
   static function result() {
+    if (!isset(self::$stop_watch_timer)) return;
     self::$stop_watch_timer->format('screen');
     if (self::$enabled) {
       output::trace(self::$stop_watch_timer->dump());
