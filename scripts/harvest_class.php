@@ -170,6 +170,15 @@ class serviceDatabase {
     }
   }
 
+  function __destruct() {
+    if (isset($this->oci)) {
+      $this->oci->close();
+    }
+    if (isset($this->ociDelete)) {
+      $this->ociDelete->close();
+    }
+  }
+  
   function queryServices() {
     stopWatchTimer::start();
     try {
@@ -228,6 +237,15 @@ class danbibDatabase {
     }
   }
 
+  function __destruct() {
+    if (isset($this->oci)) {
+      $this->oci->close();
+    }
+    if (isset($this->ociOverflow)) {
+      $this->ociOverflow->close();
+    }
+  }
+  
   private function _queryOverflow($id) {
     try {
       $sql = "select id, lbnr, data, length(data) length from poster_overflow where id = $id order by lbnr";
