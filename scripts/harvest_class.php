@@ -232,7 +232,8 @@ class danbibDatabase {
 
   private function _queryOverflow($id) {
     try {
-      $sql = "select id, lbnr, data, length(data) length from poster_overflow where id = $id order by lbnr";
+      $sql = "select id, lbnr, data, length(data) length from poster_overflow where id = :idnr order by lbnr";
+      $this->ociOverflow->bind('idnr', $id);
       $this->ociOverflow->set_query($sql);
     } catch (ociException $e) {
       output::error($e->getMessage());
@@ -249,12 +250,17 @@ class danbibDatabase {
     }
   }
 
-  function query($where) {
+  function query($where, $bindvars=array()) {
     stopWatchTimer::start();
     try {
       $sql = "select id, danbibid, bibliotek, data, length(data) length from poster";
       if (!empty($where)) {
          $sql .= " $where";
+      }
+      if (is_array($bindvars)) {
+        foreach ($bindvars as $i => $b) {
+          $this->oci->bind('p' . $i, $b);
+        }
       }
       $this->oci->set_query($sql);
     } catch (ociException $e) {
@@ -642,8 +648,17 @@ class harvest {
   }
 
 
-  private function _processDanbibData($where) {
-    $this->danbibDb->query($where);
+  private function _processDanbibData($howmuch) {
+    if (is_array($howmuch)) {
+      $pars = array();
+      foreach ($howmuch as $i => $val) {
+        $pars[] = ":p$i";
+        $vals[] = $val;
+      }
+      $this->danbibDb->query('where id in (' . implode(',', $pars) . ')', $vals);
+    } else {
+      $this->danbibDb->query('where id = ' . $howmuch, array($howmuch));
+    }
     while ($rec = $this->danbibDb->fetch()) {
       $this->progress->tick();
       $this->_processMarcRecord($rec);
@@ -657,12 +672,7 @@ class harvest {
     }
     if (is_array($howmuch)) {  // In this case, $howmuch contains an array of id's
       stopWatchTimer::start();
-      $this->_processDanbibData('where id in (' . implode(',', $howmuch) . ')');
-      stopWatchTimer::stop();
-      stopWatchTimer::result();
-    } else if ($howmuch == 'full') {
-      stopWatchTimer::start();
-      $this->_processDanbibData('');  // The where clause is empty - meaning all id's will be found
+      $this->_processDanbibData($howmuch);
       stopWatchTimer::stop();
       stopWatchTimer::result();
     } else {  // $howmuch == 'inc'
@@ -680,7 +690,7 @@ class harvest {
         while ($ids = $this->serviceDb->fetchId()) {
           $time = 1;
           try {
-            $this->_processDanbibData("where id = " . $ids['ID']);
+            $this->_processDanbibData($ids['ID']);
             if (!$this->noupdate) {  // Only remove entry from service table if update is done
               $this->serviceDb->removeService($ids['ROWID'], $ids['ID']);
             }

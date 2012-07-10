@@ -35,7 +35,11 @@ class openXId extends webServiceServer {
     try {
       $this->db=new pg_database($this->config->get_value("oxid_credentials", "setup"));
       $this->db->open();
-    } catch(Exception $e) {
+      $this->db->prepare('GetClusterDataByTypeValuePairQuery', 'select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue=$2 and idtype=(select id from oxid_id_types where name=lower($1)))');
+      $this->db->prepare('RemoveRecordsByRecordIdQuery', 'delete from oxid_ids where recordid = $1');
+      $this->db->prepare('PutIdTypeValueQuery', 'insert into oxid_ids (idtype,idvalue,recordid,clusterid) values ($1,$2,$3,$4)');
+      } catch(Exception $e) {
+      $codi = $e->getCode();
       verbose::log(ERROR, "openxid:: Couldn't open database: " . $e->__toString());
       unset($this->db);
     }
@@ -61,9 +65,10 @@ class openXId extends webServiceServer {
   */
   private function _getClusterDataByTypeValuePair($type, $value) {
     verbose::log(DEBUG, "openxid:: _getClusterDataByTypeValuePair($type, $value);");
-    $sql = "select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))";
-    verbose::log(DEBUG, "openxid::  -> SQL: $sql");
+//    $sql = "select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue=':idvalue' and idtype=(select id from oxid_id_types where name=lower(':idtype')))";
+//    verbose::log(DEBUG, "openxid::  -> SQL: $sql");
     /*
+    The following SQL has already been prepared in the constructor...
     $sql is constructed like this:
       <select 1> finds idtype as a number with $type as input:
         <select 1> = "select id from oxid_id_types where name=lower('$type')"
@@ -84,8 +89,9 @@ class openXId extends webServiceServer {
                    = "select (select name from oxid_id_types where id=ids.idtype), idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
     */
     try {
-      $this->db->set_query($sql);
-      $this->db->execute();
+      $this->db->bind('idtype', $type);    // $1
+      $this->db->bind('idvalue', $value);  // $2
+      $this->db->execute('GetClusterDataByTypeValuePairQuery');
       while( $row = $this->db->get_row() ) { 
         $result[] = $row;
       }
@@ -104,10 +110,8 @@ class openXId extends webServiceServer {
     verbose::log(DEBUG, "openxid:: _removeRecordsByRecordId($recordId);");
     if (empty($recordId)) return false;
     try {
-      $sql = "DELETE FROM oxid_ids WHERE recordid=$recordId";
-      verbose::log(DEBUG, "openxid::  -> SQL: $sql");
-      $this->db->set_query($sql);
-      $this->db->execute();
+      $this->db->bind('recordid', $recordId);  // $1
+      $this->db->execute('RemoveRecordsByRecordIdQuery');
     } catch(Exception $e) {
       verbose::log(ERROR, "openxid:: Couldn't remove records: " . $e->__toString());
       return "could not reach database";
@@ -122,7 +126,7 @@ class openXId extends webServiceServer {
   private function _getIdTypeTable() {
     verbose::log(DEBUG, "openxid:: _getIdTypeTable();");
     try {
-      $sql = "SELECT id, name FROM oxid_id_types";
+      $sql = "select id, name from oxid_id_types";
       verbose::log(DEBUG, "openxid::  -> SQL: $sql");
       $this->db->set_query($sql);
       $this->db->execute();
@@ -149,10 +153,11 @@ class openXId extends webServiceServer {
     $idType = $this->idTypeTable[$idType];
     $idValue = strip_tags($idValue);
     try {
-      $sql = "INSERT INTO oxid_ids (idtype, idvalue, recordid, clusterid) VALUES ($idType,'$idValue',$recordId,$clusterId)";
-      verbose::log(DEBUG, "openxid::  -> SQL: $sql");
-      $this->db->set_query($sql);
-      $this->db->execute();
+      $this->db->bind('idtype', $idType);        // $1
+      $this->db->bind('idvalue', $idValue);      // $2
+      $this->db->bind('recordid', $recordId);    // $3
+      $this->db->bind('clusterid', $clusterId);  // $4
+      $this->db->execute('PutIdTypeValueQuery');
     } catch(Exception $e) {
       verbose::log(ERROR, "openxid:: Couldn't put type value pair: " . $e->__toString());
       return "could not reach database";
