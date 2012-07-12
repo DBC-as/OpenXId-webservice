@@ -174,7 +174,8 @@ class serviceDatabase {
   function queryServices() {
     stopWatchTimer::start();
     try {
-      $this->oci->set_query('select rowid, id from services where service = ' . VOXB_SERVICE_NUMBER);
+      $this->oci->bind('srvnr', VOXB_SERVICE_NUMBER);
+      $this->oci->set_query('select rowid, id from services where service = :srvnr');
     } catch (ociException $e) {
       output::error($e->getMessage());
       stopWatchTimer::stop();
@@ -657,7 +658,7 @@ class harvest {
       }
       $this->danbibDb->query('where id in (' . implode(',', $pars) . ')', $vals);
     } else {
-      $this->danbibDb->query('where id = ' . $howmuch, array($howmuch));
+      $this->danbibDb->query('where id = :p0', array($howmuch));
     }
     while ($rec = $this->danbibDb->fetch()) {
       $this->progress->tick();
