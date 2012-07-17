@@ -584,8 +584,9 @@ class harvest {
       require_once($config->get_value('openxidpath', 'setup') . '/openxid_class.php');  // Include the Openxid classes
       // Now define a subclass of OpenXId - cannot be done before runtime, because placement of parent openXId class is not known before now
       eval("class directOpenXId extends openXId { function initOpenXid() { \$this->aaa->init_rights(null, null, null, '$server_ip'); } }");
-      openXidWrapper::openxidClass(new directOpenXId($config->get_value('openxidpath', 'setup') . '/openxid.ini'));
+      openXidWrapper::openxidClass(new directOpenXId($config->get_value('openxidpath', 'setup') . '/openxid.ini', true));
     }
+    output::open($config->get_value("logfile", "setup"), $config->get_value("verbose", "setup"));
     $this->progress = new progressIndicator(!(array_key_exists('marc', $verbose) or array_key_exists('verbose', $verbose)));
     output::enable(array_key_exists('verbose', $verbose));
     output::marcEnable(array_key_exists('marc', $verbose) and array_key_exists('verbose', $verbose));
@@ -595,7 +596,6 @@ class harvest {
       stopWatchTimer::init();
     }
     openXidWrapper::enable(!$this->noupdate);
-    output::open($config->get_value("logfile", "setup"), $config->get_value("verbose", "setup"));
     // Construct the fieldTab table - translating field/subfield to identifier types
     $this->fieldTab = array();
     $fieldFromIni = $config->get_value('field', 'marc');

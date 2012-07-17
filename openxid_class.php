@@ -30,8 +30,9 @@ class openXId extends webServiceServer {
   protected $db;
   private $idTypeTable;
 
-  function __construct($inifile) {
+  function __construct($inifile, $silent=false) {
     parent::__construct($inifile);
+    if ($silent) verbose::open('/dev/null');  // When instantiated by the harvester - the harvester sets up the common logfile, so all logging will then go there
     try {
       $this->db=new pg_database($this->config->get_value("oxid_credentials", "setup"));
       $this->db->open();
