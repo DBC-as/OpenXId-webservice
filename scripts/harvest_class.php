@@ -32,7 +32,6 @@ define('VOXB_SERVICE_NUMBER', 7);               // Service number for the Voxb S
 define('VOXB_HARVEST_POLL_TIME', 5);            // Time given in minutes
 define('PROGRESS_INDICATOR_LINE_LENGTH', 100);  // Number of periods in a progression indicator line
 define('PROGRESS_INDICATOR_CHUNK', 100);        // Size of chunks to process for each period to be echoed
-define('TIME_MEASUREMENT', true);               // Determines whether time will be measured and logged
 
 //==============================================================================
 
@@ -172,10 +171,12 @@ class serviceDatabase {
   }
 
   function queryServices() {
+    global $config;
     stopWatchTimer::start();
     try {
       $this->oci->bind('srvnr', VOXB_SERVICE_NUMBER);
-      $this->oci->set_query('select rowid, id from services where service = :srvnr');
+      $this->oci->bind('chunk', $config->get_value("service_table_limit", "setup"));
+      $this->oci->set_query('select rowid, id from services where service = :srvnr and rownum <= :chunk');
     } catch (ociException $e) {
       output::error($e->getMessage());
       stopWatchTimer::stop();
@@ -668,7 +669,7 @@ class harvest {
 
 
   function execute($howmuch) {
-    if (empty($howmuch)) {  // $howmuch contains either one of the strings 'full' or 'inc' - or an array of id's
+    if (empty($howmuch)) {
       throw new Exception('No identifiers specified');
     }
     if (is_array($howmuch)) {  // In this case, $howmuch contains an array of id's
@@ -678,8 +679,8 @@ class harvest {
       stopWatchTimer::result();
     } else {  // $howmuch == 'inc'
       $time = 1;
-            
-      while (true) {
+
+      while (true) {  // This loop waits until there is data (if switch -l is set)
         stopWatchTimer::start();
         try {
           $this->serviceDb->queryServices();
@@ -688,24 +689,36 @@ class harvest {
           stopWatchTimer::result();
           throw new Exception('Service database could not be queried');
         }
-        while ($ids = $this->serviceDb->fetchId()) {
-          $time = 1;
-          try {
-            $this->_processDanbibData($ids['ID']);
-            if (!$this->noupdate) {  // Only remove entry from service table if update is done
-              $this->serviceDb->removeService($ids['ROWID'], $ids['ID']);
+
+        $ids = $this->serviceDb->fetchId();
+        if (!empty($ids)) {
+          do {  // This loop iterates through all records selected by $this->serviceDb->queryServices()
+            $time = 1;
+            try {
+              $this->_processDanbibData($ids['ID']);
+              if (!$this->noupdate) {  // Only remove entry from service table if update is done
+                $this->serviceDb->removeService($ids['ROWID'], $ids['ID']);
+              }
+            } catch (Exception $e) {
+              stopWatchTimer::stop();
+              stopWatchTimer::result();
+              output::error('Error while processing Danbib data - ' . $e->getMessage());
             }
-          } catch (Exception $e) {
-            output::error('Error while processing Danbib data - ' . $e->getMessage());
+          } while ($ids = $this->serviceDb->fetchId());
+        } else {  // No id's found by $this->serviceDb->queryServices()
+          if ($this->loop) {
+            output::trace("Delaying: $time seconds");
+            sleep($time);
+            $time = min(2*$time, 60*VOXB_HARVEST_POLL_TIME);  // Double the time value (with a ceiling value)
           }
-        }        
+        }
+        if (!$this->loop) {
+          stopWatchTimer::stop();
+          stopWatchTimer::result();
+          break;  // Break out of loop
+        }
         stopWatchTimer::stop();
         stopWatchTimer::result();
-        if (!$this->loop) break;
-
-        output::trace("Delaying: $time seconds");
-        sleep($time);
-        $time = min(2*$time, 60*VOXB_HARVEST_POLL_TIME);  // Double the time value (with a ceiling value)
       }
     }
   }

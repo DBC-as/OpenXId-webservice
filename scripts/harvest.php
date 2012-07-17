@@ -54,9 +54,9 @@ function usage($str='') {
     $version_text = isset($config) ? " - version {$config->get_value("version", "setup")}" : "";
     echo "OpenXId Harvest$version_text\n\n";
   }
+  echo "Purpose:\nMake a harvest of Danbib records. If individual records are specified by the -i switch,\nthese are harvested. If not the harvester makes an incremental harvest by asking the Service Table\nfor a chunk of Danbib records. Each chunk consist of max. {$config->get_value("service_table_limit", "setup")} records.\n\n";
   echo "Usage: \n\$ $argv[0] [-p 'initfile'] [-f] [-i 'id'] [-l] [-n] [-v] [-m] [-h]\n";
   echo "\t-p 'initfile' (default: \"$inifile\") \n";
-//  echo "\t-f\tfull harvest (if not specified, an incremental harvest is done) \n";
   echo "\t-i 'id'\tharvests only the danbib record with identifier <id>. Please note,\n\t\tthat this disables full/incremental harvest.\n\t\tMultiple identifiers may be specified. \n";
   echo "\t-l\tloop mode - when doing an incremental harvest, start over when one harvest is done \n";
   echo "\t-n\tno update - no requests are sent to OpenXid\n\t\tPlease note, that in this case, incremental harvest does not remove the entry in the service table \n";

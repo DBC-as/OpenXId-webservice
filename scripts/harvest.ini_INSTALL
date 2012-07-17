@@ -9,6 +9,9 @@ servicelogon = ...
 ; Url for the OpenXid Webservice
 openxidurl = ...
 
+; Configure max number of records in a chunk
+service_table_limit = 1000
+
 ; logfile for verbose output
 logfile = ...
 
