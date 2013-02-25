@@ -172,8 +172,10 @@ class Test_OpenXid extends UnitTestCase {
    */
   private function _create_empty_database() {
     $inifile = $this->_temp_inifile($this->ini_success);
-    $res = exec("php ../scripts/create_tables.php -p $inifile -C YES", $output);
-    return $res;
+    unset($output, $return_var);
+    exec("php ../scripts/create_tables.php -p $inifile -C YES", $output, $return_var);
+echo "exec returns: \n" . join ("\n", $output) . "\n";
+    return $return_var;
     }
 
   /**
@@ -193,7 +195,7 @@ class Test_OpenXid extends UnitTestCase {
   function test_instantiation() {
     $id_types = array('faust', 'ean', 'issn', 'local');
   
-    echo "Output fra exec: " . $this->_create_empty_database();
+    $this->_create_empty_database();
     
     $oxid = $this->_instantiate_oxid();
     $this->assertIsA($oxid, 'openXId');
