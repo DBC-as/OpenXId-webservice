@@ -173,7 +173,8 @@ class Test_OpenXid extends UnitTestCase {
   private function _create_empty_database() {
     $inifile = $this->_temp_inifile($this->ini_success);
     unset($output, $return_var);
-    exec("php ../scripts/create_tables.php -p $inifile -C YES", $output, $return_var);
+    $command = "php " . __dir__ . "/../scripts/create_tables.php -p $inifile -C YES";
+    exec($command, $output, $return_var);
     return $return_var;
     }
 
