@@ -40,7 +40,7 @@
     $inifile = $startdir . "/../" . "openxid.ini";
 
     $deleteTables = false;
-    $options = getopt('?p:hC:');
+    $options = getopt('p:hC:');
     if (array_key_exists('h', $options)) usage(); 
     if (array_key_exists('p', $options)) $inifile = $options['p'];
     if (array_key_exists('C',$options)) { 

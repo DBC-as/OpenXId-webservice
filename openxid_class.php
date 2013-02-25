@@ -28,7 +28,7 @@ require_once("OLS_class_lib/material_id_class.php");
 class openXId extends webServiceServer {
 
   protected $db;
-  private $idTypeTable;
+  protected $idTypeTable;
 
   function __construct($inifile, $silent=false) {
     parent::__construct($inifile);
@@ -36,17 +36,17 @@ class openXId extends webServiceServer {
     try {
       $this->db=new pg_database($this->config->get_value("oxid_credentials", "setup"));
       $this->db->open();
-      $this->db->prepare('GetClusterDataByTypeValuePairQuery', 'select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue=$2 and idtype=(select id from oxid_id_types where name=lower($1)))');
-      $this->db->prepare('RemoveRecordsByRecordIdQuery', 'delete from oxid_ids where recordid = $1');
-      $this->db->prepare('PutIdTypeValueQuery', 'insert into oxid_ids (idtype,idvalue,recordid,clusterid) values ($1,$2,$3,$4)');
-      } catch(Exception $e) {
-      $codi = $e->getCode();
+      $this->_prepare_postgres('GetClusterDataByTypeValuePairQuery', 'select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue=$2 and idtype=(select id from oxid_id_types where name=lower($1)))');
+      $this->_prepare_postgres('RemoveRecordsByRecordIdQuery', 'delete from oxid_ids where recordid = $1');
+      $this->_prepare_postgres('PutIdTypeValueQuery', 'insert into oxid_ids (idtype,idvalue,recordid,clusterid) values ($1,$2,$3,$4)');
+    } catch(Exception $e) {
       verbose::log(ERROR, "openxid:: Couldn't open database: " . $e->__toString());
       unset($this->db);
     }
     // get conversion table between binary idType id's and textual idTypes
     if (isset($this->db)) {
-      if (is_string($this->idTypeTable = $this->_getIdTypeTable())) {
+      $this->idTypeTable = $this->_getIdTypeTable();
+      if (is_string($this->idTypeTable)) {
         verbose::log(ERROR, "openxid:: Couldn't open database: " . $this->idTypeTable);
         unset($this->db);
       }
@@ -61,10 +61,22 @@ class openXId extends webServiceServer {
     parent::__destruct();
   }
 
+ /** \brief _prepare_postgres
+  * @param string $name Name of the prepared statement
+  * @param string $sql SQL string to prepare
+  */
+  private function _prepare_postgres($name, $sql) {
+    try {
+      @$this->db->prepare($name, $sql);
+    } catch(fetException $e) {
+      // Do nothing - the statement has already been prepared, just continue
+    }
+  }
+
  /** \brief _getClusterDataByTypeValuePair
   *
   */
-  private function _getClusterDataByTypeValuePair($type, $value) {
+  protected function _getClusterDataByTypeValuePair($type, $value) {
     verbose::log(DEBUG, "openxid:: _getClusterDataByTypeValuePair($type, $value);");
 //    $sql = "select (select name from oxid_id_types where id=ids.idtype) as idtype, idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue=':idvalue' and idtype=(select id from oxid_id_types where name=lower(':idtype')))";
 //    verbose::log(DEBUG, "openxid::  -> SQL: $sql");
@@ -107,7 +119,7 @@ class openXId extends webServiceServer {
  /** \brief _removeRecordsByRecordId
   *
   */
-  private function _removeRecordsByRecordId($recordId) {
+  protected function _removeRecordsByRecordId($recordId) {
     verbose::log(DEBUG, "openxid:: _removeRecordsByRecordId($recordId);");
     if (empty($recordId)) return false;
     try {
@@ -124,7 +136,7 @@ class openXId extends webServiceServer {
  /** \brief _getIdTypeTable
   *
   */
-  private function _getIdTypeTable() {
+  protected function _getIdTypeTable() {
     verbose::log(DEBUG, "openxid:: _getIdTypeTable();");
     try {
       $sql = "select id, name from oxid_id_types";
@@ -145,7 +157,7 @@ class openXId extends webServiceServer {
  /** \brief _putIdTypeValue
   *
   */
-  private function _putIdTypeValue($recordId, $clusterId, $idType, $idValue) {
+  protected function _putIdTypeValue($recordId, $clusterId, $idType, $idValue) {
     verbose::log(DEBUG, "openxid:: _putIdTypeValue($recordId, $clusterId, $idType, $idValue);");
     $recordId = strip_tags($recordId);
     $clusterId = strip_tags($clusterId);
@@ -170,7 +182,7 @@ class openXId extends webServiceServer {
  /** \brief _normalize
   *
   */
-  private function _normalize($idType, $idValue) {
+  protected function _normalize($idType, $idValue) {
     switch ($idType) {
       case 'ean':
         // Check if number is an EAN number
@@ -195,7 +207,7 @@ class openXId extends webServiceServer {
  /** \brief _removeDuplicates
   *
   */
-  private function _removeDuplicates($data) {
+  protected function _removeDuplicates($data) {
     if (!is_array($data)) return null;
     foreach($data as $item) {
       $acc[$item['idtype']][$item['idvalue']]++;  // Make new array with data as keys, hereby duplicates are overwritten
@@ -234,6 +246,13 @@ class openXId extends webServiceServer {
     }
 
     $paramId = is_array($param->id) ? $param->id : array($param->id);
+    if (empty($paramId)) {
+      $xid_error = &$xid_getIdsResponse->_value->error;
+      $xid_error->_value = "invalid id";
+      $xid_error->_namespace = $this->xmlns['xid'];
+      return $ret;
+    }
+
     $clusterData = array();
     foreach ($paramId as $id) {
       $item = array();
@@ -371,7 +390,7 @@ class openXId extends webServiceServer {
     }
 
     // Format output xml
-    if (!is_array($id)) {
+    if (!is_array($id) or empty($id)) {
       $xid_updateIdStatus = &$xid_updateIdResponse->_value->updateIdStatus;
       $xid_updateIdOk = &$status_item->_value->updateIdOk;
       $xid_updateIdOk->_namespace = $this->xmlns['xid'];
