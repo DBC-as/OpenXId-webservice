@@ -193,7 +193,7 @@ class Test_OpenXid extends UnitTestCase {
    * Test instantiation of the openXId class
    */
   function test_instantiation() {
-    $id_types = array('faust', 'ean', 'issn', 'local');
+    $id_types = array('faust', 'ean', 'issn', 'local', 'oclc');
   
     $this->_create_empty_database();
     
