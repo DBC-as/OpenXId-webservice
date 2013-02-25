@@ -101,6 +101,7 @@ class openXId extends webServiceServer {
         <select 5> = "select <select 4>, idvalue from oxid_ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
                    = "select (select name from oxid_id_types where id=ids.idtype), idvalue from oxid_ids ids where clusterid in (select clusterid from oxid_ids where idvalue='$value' and idtype=(select id from oxid_id_types where name=lower('$type')))"
     */
+    $result = array();
     try {
       $this->db->bind('idtype', $type);    // $1
       $this->db->bind('idvalue', $value);  // $2
@@ -112,6 +113,7 @@ class openXId extends webServiceServer {
       verbose::log(ERROR, "openxid:: Couldn't get cluster data: " . $e->__toString());
       return "could not reach database";
     }
+print_r($result);
     return $result;
   }
 

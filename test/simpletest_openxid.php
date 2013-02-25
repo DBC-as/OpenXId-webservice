@@ -279,8 +279,6 @@ class Test_OpenXid extends UnitTestCase {
       $res = $oxid->utPutIdTypeValue($d[0], $d[1], $d[2], $d[3]);
       $this->assertIdentical($res, $d[4]);
     }
-// Her indføres en test af den nye get_by_typeValue() når den implementeres
-
     $cluster_data = array();  // An array indexed by clusterId, containing all elements in that cluster
     foreach ($test_data as $d) {
       if ($d[4] !== false) continue;
@@ -288,6 +286,7 @@ class Test_OpenXid extends UnitTestCase {
     }
     foreach ($test_data as $d) {
       if ($d[4] !== false) continue;
+echo "Testing...\n";
       $actual_content = $oxid->utGetClusterDataByTypeValuePair($d[2], $d[3]);
       $expected_content = $cluster_data[$d[1]];
       $this->assertEqual($actual_content, $expected_content);
