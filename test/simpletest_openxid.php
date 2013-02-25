@@ -291,6 +291,8 @@ class Test_OpenXid extends UnitTestCase {
       $actual_content = $oxid->utGetClusterDataByTypeValuePair($d[2], $d[3]);
       $expected_content = $cluster_data[$d[1]];
       $this->assertEqual($actual_content, $expected_content);
+      print_r($actual_content);
+      print_r($expected_content);
     }
     unset($oxid);
   }
