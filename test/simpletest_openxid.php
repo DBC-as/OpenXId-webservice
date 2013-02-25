@@ -140,7 +140,7 @@ class utAaa {
  */
 class Test_OpenXid extends UnitTestCase {
   private $temp_files;
-  private $ini_success = array("[setup]", "oxid_credentials = host=pgtest dbname=slf user=slf password=slf");
+  private $ini_success = array("[setup]", "oxid_credentials = host=pgtest dbname=openxidtest user=openxidtest password=ogemudf");
 
   function __construct($label = false) {
     parent::__construct($label);
