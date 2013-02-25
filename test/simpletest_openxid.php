@@ -193,7 +193,7 @@ class Test_OpenXid extends UnitTestCase {
   function test_instantiation() {
     $id_types = array('faust', 'ean', 'issn', 'local');
   
-    echo $this->_create_empty_database();
+    echo "Output fra exec: " . $this->_create_empty_database();
     
     $oxid = $this->_instantiate_oxid();
     $this->assertIsA($oxid, 'openXId');
