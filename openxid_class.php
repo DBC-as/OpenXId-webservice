@@ -113,7 +113,6 @@ class openXId extends webServiceServer {
       verbose::log(ERROR, "openxid:: Couldn't get cluster data: " . $e->__toString());
       return "could not reach database";
     }
-print_r($result);
     return $result;
   }
 
@@ -160,7 +159,6 @@ print_r($result);
   *
   */
   protected function _putIdTypeValue($recordId, $clusterId, $idType, $idValue) {
-echo "putIdTypeValue: $recordId, $clusterId, $idType, $idValue\n";
     verbose::log(DEBUG, "openxid:: _putIdTypeValue($recordId, $clusterId, $idType, $idValue);");
     $recordId = strip_tags($recordId);
     $clusterId = strip_tags($clusterId);

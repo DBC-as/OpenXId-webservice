@@ -193,7 +193,8 @@ class Test_OpenXid extends UnitTestCase {
   function test_instantiation() {
     $id_types = array('faust', 'ean', 'issn', 'local');
   
-    $this->_create_empty_database();
+    echo $this->_create_empty_database();
+    
     $oxid = $this->_instantiate_oxid();
     $this->assertIsA($oxid, 'openXId');
     
@@ -266,7 +267,7 @@ class Test_OpenXid extends UnitTestCase {
       // Key       0          1          2        3  4
       array(     551,        23,   'dummy',   13232, 'invalid idType' ),
       array(      41,        23,         0,     232, 'could not reach database' ),
-      array(      11,        23,   'faust',   33313, false ),
+      array(      11,        23,   'faust',    3232, false ),
       array(      12,       233,    'issn',    1234, false ),
       array(      13,        23,     'ean',    3456, false ),
       array(      14,       323,   'local',    4567, false ),
@@ -279,6 +280,8 @@ class Test_OpenXid extends UnitTestCase {
       $res = $oxid->utPutIdTypeValue($d[0], $d[1], $d[2], $d[3]);
       $this->assertIdentical($res, $d[4]);
     }
+// Her indføres en test af den nye get_by_typeValue() når den implementeres
+
     $cluster_data = array();  // An array indexed by clusterId, containing all elements in that cluster
     foreach ($test_data as $d) {
       if ($d[4] !== false) continue;
@@ -286,12 +289,9 @@ class Test_OpenXid extends UnitTestCase {
     }
     foreach ($test_data as $d) {
       if ($d[4] !== false) continue;
-echo "Testing...\n";
       $actual_content = $oxid->utGetClusterDataByTypeValuePair($d[2], $d[3]);
       $expected_content = $cluster_data[$d[1]];
       $this->assertEqual($actual_content, $expected_content);
-      print_r($actual_content);
-      print_r($expected_content);
     }
     unset($oxid);
   }
