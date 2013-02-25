@@ -174,7 +174,6 @@ class Test_OpenXid extends UnitTestCase {
     $inifile = $this->_temp_inifile($this->ini_success);
     unset($output, $return_var);
     exec("php ../scripts/create_tables.php -p $inifile -C YES", $output, $return_var);
-echo "exec returns: \n" . join ("\n", $output) . "\n";
     return $return_var;
     }
 
@@ -282,8 +281,6 @@ echo "exec returns: \n" . join ("\n", $output) . "\n";
       $res = $oxid->utPutIdTypeValue($d[0], $d[1], $d[2], $d[3]);
       $this->assertIdentical($res, $d[4]);
     }
-// Her indføres en test af den nye get_by_typeValue() når den implementeres
-
     $cluster_data = array();  // An array indexed by clusterId, containing all elements in that cluster
     foreach ($test_data as $d) {
       if ($d[4] !== false) continue;
