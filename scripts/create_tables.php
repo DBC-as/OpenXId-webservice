@@ -99,6 +99,7 @@
         INSERT INTO oxid_id_types (id, name) VALUES (1, 'ean');
         INSERT INTO oxid_id_types (id, name) VALUES (2, 'issn');
         INSERT INTO oxid_id_types (id, name) VALUES (3, 'local');
+        INSERT INTO oxid_id_types (id, name) VALUES (4, 'oclc');
         \n";
         $db->exe($sql);
         echo"TRACE, table created:$sql";
