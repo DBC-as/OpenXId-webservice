@@ -266,7 +266,7 @@ class Test_OpenXid extends UnitTestCase {
       // Key       0          1          2        3  4
       array(     551,        23,   'dummy',   13232, 'invalid idType' ),
       array(      41,        23,         0,     232, 'could not reach database' ),
-      array(      11,        23,   'faust',    3232, false ),
+      array(      11,        23,   'faust',   33313, false ),
       array(      12,       233,    'issn',    1234, false ),
       array(      13,        23,     'ean',    3456, false ),
       array(      14,       323,   'local',    4567, false ),
