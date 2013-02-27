@@ -21,7 +21,6 @@ INSERT INTO oxid_id_types (id, name) VALUES (0, 'faust');
 INSERT INTO oxid_id_types (id, name) VALUES (1, 'ean');
 INSERT INTO oxid_id_types (id, name) VALUES (2, 'issn');
 INSERT INTO oxid_id_types (id, name) VALUES (3, 'local');
-INSERT INTO oxid_id_types (id, name) VALUES (4, 'oclc');
 
 CREATE INDEX oxid_id_types_id_idx ON oxid_id_types (id);
 
